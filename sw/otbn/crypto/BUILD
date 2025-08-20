@@ -6,7 +6,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-load("//rules:otbn.bzl", "otbn_binary", "otbn_library", )
+load("//rules:otbn.bzl", "otbn_binary", "otbn_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -34,6 +34,21 @@ otbn_library(
     name = "ed25519_scalar",
     srcs = [
         "ed25519_scalar.s",
+    ],
+)
+
+otbn_binary(
+    name = "run_ed25519",
+    srcs = [
+        "run_ed25519.s",
+    ],
+    deps = [
+        ":ed25519",
+        ":ed25519_scalar",
+        ":field25519",
+        ":sha512_compact",
+        ":sha512_interface",
+        ":sha512_padding",
     ],
 )
 

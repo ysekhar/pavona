@@ -1666,12 +1666,6 @@ fe_pow_2252m3:
 
 .section .scratchpad
 
-/* Hash of the secret key (512 bits). Intermediate value for sign. */
-.balign 32
-.weak ed25519_hash_h
-ed25519_hash_h:
-  .zero 64
-
 /* Hash value r (512 bits). Intermediate value for sign. */
 .balign 32
 .weak ed25519_hash_r
@@ -1775,6 +1769,12 @@ ed25519_sig_S:
 .weak ed25519_public_key
 ed25519_public_key:
   .zero 32
+
+/* Hash of the secret key (512 bits). Intermediate value for sign. */
+.balign 32
+.weak ed25519_hash_h
+ed25519_hash_h:
+  .zero 64
 
 /* Hash value k (512 bits). Input for verify, intermediate for sign. */
 .balign 32

@@ -1,3 +1,7 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright lowRISC contributors (OpenTitan project).
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
@@ -94,7 +98,12 @@ cc_library(
     hdrs = ["//sw/device/lib/crypto/include:ed25519.h"],
     target_compatible_with = [OPENTITAN_CPU],
     deps = [
+        ":integrity",
+        ":sha2",
         ":status",
+        "//sw/device/lib/base:math",
+        "//sw/device/lib/crypto/drivers:entropy",
+        "//sw/device/lib/crypto/impl/ecc:ed25519",
         "//sw/device/lib/crypto/include:datatypes",
     ],
 )

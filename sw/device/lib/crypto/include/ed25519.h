@@ -1,3 +1,7 @@
+// Copyright zeroRISC Inc.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
@@ -51,6 +55,7 @@ otcrypto_status_t otcrypto_ed25519_keygen(otcrypto_blinded_key_t *private_key,
  *
  * @param private_key Pointer to the blinded private key struct.
  * @param input_message Input message to be signed.
+ * @param context Context for signing.
  * @param sign_mode EdDSA signature hashing mode.
  * @param[out] signature Pointer to the EdDSA signature with (r,s) values.
  * @return Result of the Ed25519 signature generation.
@@ -58,7 +63,7 @@ otcrypto_status_t otcrypto_ed25519_keygen(otcrypto_blinded_key_t *private_key,
 OT_WARN_UNUSED_RESULT
 otcrypto_status_t otcrypto_ed25519_sign(
     const otcrypto_blinded_key_t *private_key,
-    otcrypto_const_byte_buf_t input_message,
+    otcrypto_const_byte_buf_t input_message, otcrypto_const_byte_buf_t context,
     otcrypto_eddsa_sign_mode_t sign_mode, otcrypto_word32_buf_t signature);
 
 /**
@@ -71,6 +76,7 @@ otcrypto_status_t otcrypto_ed25519_sign(
  *
  * @param public_key Pointer to the unblinded public key struct.
  * @param input_message Input message to be signed for verification.
+ * @param context Context for signing.
  * @param sign_mode EdDSA signature hashing mode.
  * @param signature Pointer to the signature to be verified.
  * @param[out] verification_result Whether the signature passed verification.
@@ -79,7 +85,7 @@ otcrypto_status_t otcrypto_ed25519_sign(
 OT_WARN_UNUSED_RESULT
 otcrypto_status_t otcrypto_ed25519_verify(
     const otcrypto_unblinded_key_t *public_key,
-    otcrypto_const_byte_buf_t input_message,
+    otcrypto_const_byte_buf_t input_message, otcrypto_const_byte_buf_t context,
     otcrypto_eddsa_sign_mode_t sign_mode, otcrypto_const_word32_buf_t signature,
     hardened_bool_t *verification_result);
 
@@ -120,6 +126,7 @@ otcrypto_status_t otcrypto_ed25519_keygen_async_finalize(
  *
  * @param private_key Pointer to the blinded private key struct.
  * @param input_message Input message to be signed.
+ * @param context Context for signing.
  * @param sign_mode EdDSA signature hashing mode.
  * @param[out] signature Pointer to the EdDSA signature to get (r) value.
  * @return Result of async Ed25519 start operation.
@@ -127,7 +134,7 @@ otcrypto_status_t otcrypto_ed25519_keygen_async_finalize(
 OT_WARN_UNUSED_RESULT
 otcrypto_status_t otcrypto_ed25519_sign_async_start(
     const otcrypto_blinded_key_t *private_key,
-    otcrypto_const_byte_buf_t input_message,
+    otcrypto_const_byte_buf_t input_message, otcrypto_const_byte_buf_t context,
     otcrypto_eddsa_sign_mode_t sign_mode, otcrypto_word32_buf_t signature);
 
 /**
@@ -151,6 +158,7 @@ otcrypto_status_t otcrypto_ed25519_sign_async_finalize(
  *
  * @param public_key Pointer to the unblinded public key struct.
  * @param input_message Input message to be signed for verification.
+ * @param context Context for signing.
  * @param sign_mode EdDSA signature hashing mode.
  * @param signature Pointer to the signature to be verified.
  * @return Result of async Ed25519 verification start operation.
@@ -158,7 +166,7 @@ otcrypto_status_t otcrypto_ed25519_sign_async_finalize(
 OT_WARN_UNUSED_RESULT
 otcrypto_status_t otcrypto_ed25519_verify_async_start(
     const otcrypto_unblinded_key_t *public_key,
-    otcrypto_const_byte_buf_t input_message,
+    otcrypto_const_byte_buf_t input_message, otcrypto_const_byte_buf_t context,
     otcrypto_eddsa_sign_mode_t sign_mode,
     otcrypto_const_word32_buf_t signature);
 
@@ -174,11 +182,13 @@ otcrypto_status_t otcrypto_ed25519_verify_async_start(
  * status code, as for other operations, only indicates whether errors were
  * encountered, and may return OK even when the signature is invalid.
  *
+ * @param signature Pointer to the signature being verified.
  * @param[out] verification_result Whether the signature passed verification.
  * @return Result of async Ed25519 verification finalize operation.
  */
 OT_WARN_UNUSED_RESULT
 otcrypto_status_t otcrypto_ed25519_verify_async_finalize(
+    otcrypto_const_word32_buf_t signature,
     hardened_bool_t *verification_result);
 
 #ifdef __cplusplus
