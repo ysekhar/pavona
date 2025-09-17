@@ -532,7 +532,7 @@ OT_WARN_UNUSED_RESULT static status_t csrng_send_app_cmd(
       }
 
       // Read the status bit again as an FI protection.
-      reg = abs_mmio_read32(kBaseCsrng + CSRNG_SW_CMD_STS_REG_OFFSET);
+      reg = abs_mmio_read32(csrng_base() + CSRNG_SW_CMD_STS_REG_OFFSET);
       HARDENED_CHECK_EQ(
           bitfield_field32_read(reg, CSRNG_SW_CMD_STS_CMD_STS_FIELD), false);
     }
@@ -858,7 +858,7 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
     return OTCRYPTO_RECOV_ERR;
   }
   res ^=
-      abs_mmio_read32(kBaseEntropySrc + ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET);
+      abs_mmio_read32(entropy_src_base() + ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET);
 
   // Check that entropy_src is running in a FIPS-enabled mode without bypassing
   // the conditioner (es_type) and while making results available to hardware
@@ -912,13 +912,13 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
   }
 
   // Read values again as an FI mitigation.
-  reg = abs_mmio_read32(kBaseEntropySrc +
+  reg = abs_mmio_read32(entropy_src_base() +
                         ENTROPY_SRC_HEALTH_TEST_WINDOWS_REG_OFFSET);
   HARDENED_CHECK_EQ(bitfield_field32_read(
                         reg, ENTROPY_SRC_HEALTH_TEST_WINDOWS_FIPS_WINDOW_FIELD),
                     config->fips_test_window_size);
   HARDENED_CHECK_EQ(exp_reg,
-                    abs_mmio_read32(kBaseEntropySrc +
+                    abs_mmio_read32(entropy_src_base() +
                                     ENTROPY_SRC_ALERT_THRESHOLD_REG_OFFSET));
 
   // Check health test thresholds.
@@ -968,10 +968,10 @@ static status_t edn_check(const edn_config_t *config) {
   // Determine which EDN instance this is based on the config pointer
   uint32_t base_address;
   if (config ==
-      &kEntropyComplexConfigs[kEntropyComplexConfigIdContinuous].edn0) {
+      &kEntropyComplexConfigIdContinuous.edn0) {
     base_address = edn0_base();
   } else if (config ==
-             &kEntropyComplexConfigs[kEntropyComplexConfigIdContinuous].edn1) {
+             &kEntropyComplexConfigIdContinuous.edn1) {
     base_address = edn1_base();
   } else {
     return OTCRYPTO_FATAL_ERR;
