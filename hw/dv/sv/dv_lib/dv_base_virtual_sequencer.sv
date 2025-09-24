@@ -16,4 +16,7 @@ class dv_base_virtual_sequencer #(type CFG_T = dv_base_env_cfg,
     is_virtual_sequencer = 1;
   endfunction
 
+  function void handle_reset_assertion();
+    `uvm_fatal(`gfn, "handle_reset_assertion() need implementation in derived class")
+  endfunction : handle_reset_assertion
 endclass

@@ -23,7 +23,6 @@ package dv_lib_pkg;
   `include "dv_pair.sv"
   `include "dv_callback.sv"
   `include "dv_monitor.sv"
-  `include "dv_sequencer_list.sv"
   `include "dv_rst_domain.sv"
 
   // base agent
@@ -36,6 +35,7 @@ package dv_lib_pkg;
 
   `include "dv_rst_safe_base_driver.sv"
   `include "dv_rst_safe_base_monitor.sv"
+  `include "dv_rst_safe_base_agent.sv"
 
   // base seq
   `include "dv_base_seq.sv"
@@ -49,6 +49,9 @@ package dv_lib_pkg;
 
   // base test vseq
   `include "dv_base_vseq.sv"
+
+  `include "dv_test_seq_parameters.sv"
+  `include "dv_rand_rst_safe_base_vseq.sv"
 
   // base test
   `include "dv_base_test.sv"

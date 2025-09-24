@@ -31,8 +31,6 @@ class dv_base_sequencer #(type ITEM_T     = uvm_sequence_item,
   endfunction : new
 
   function void build_phase(uvm_phase phase);
-    dv_pair#(uvm_sequencer_base, bit) seqr_pair;
-
     super.build_phase(phase);
 
     // Avoid null pointer if the cfg is not defined.
@@ -42,11 +40,5 @@ class dv_base_sequencer #(type ITEM_T     = uvm_sequence_item,
       if (cfg.has_req_fifo) req_analysis_fifo = new("req_analysis_fifo", this);
       if (cfg.has_rsp_fifo) rsp_analysis_fifo = new("rsp_analysis_fifo", this);
     end
-
-    // Push the sequencer into the static sequencer list
-    seqr_pair = new();
-    seqr_pair.fill_pair (this, do_not_reset);
-    dv_sequencer_list::register_sequencer(seqr_pair);
   endfunction : build_phase
-
 endclass

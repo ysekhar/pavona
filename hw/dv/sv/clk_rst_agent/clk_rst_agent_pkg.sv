@@ -33,6 +33,6 @@ package clk_rst_agent_pkg;
 
   `include "delay_driver.sv"
   `include "delay_agent.sv"
-//
-//  `include "clk_rst_seq_list.sv"
+
+  `include "clk_rst_seq_list.sv"
 endpackage: clk_rst_agent_pkg

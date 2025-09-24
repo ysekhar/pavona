@@ -15,6 +15,7 @@ class delay_agent extends uvm_agent;
 
   `uvm_component_new
 
+
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
 
@@ -35,6 +36,7 @@ class delay_agent extends uvm_agent;
     end
   endfunction
 
+
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     if (cfg.is_active && cfg.has_driver) begin
@@ -42,9 +44,30 @@ class delay_agent extends uvm_agent;
     end
   endfunction
 
+
   function void start_of_simulation_phase(uvm_phase phase);
     super.start_of_simulation_phase(phase);
     if (cfg.reset_domain == null)
       `uvm_fatal(`gfn, "'cfg.reset_domain' is null. Resolve this before proceeding")
   endfunction
+
+
+  task run_phase(uvm_phase phase);
+    super.run_phase(phase);
+
+    // The first reset is POR. Wait until a full reset cycle is observed
+    cfg.reset_domain.wait_reset_assert();
+    cfg.reset_domain.wait_reset_deassert();
+
+    fork
+      begin : agent_reset_thread
+        forever begin
+          cfg.reset_domain.wait_reset_assert();
+          sequencer.stop_sequences();
+
+          cfg.reset_domain.wait_reset_deassert();
+        end // forever
+      end
+    join_none
+  endtask
 endclass
