@@ -287,10 +287,24 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor(
       modulus_eq = hardened_memeq(modulus.data, pk->n.data, modulus.len);
       return OTCRYPTO_OK;
     }
-    case kOtcryptoRsaSize3072:
-      return OTCRYPTO_NOT_IMPLEMENTED;
-    case kOtcryptoRsaSize4096:
-      return OTCRYPTO_NOT_IMPLEMENTED;
+    case kOtcryptoRsaSize3072: {
+      if (public_key->key_length != sizeof(rsa_3072_public_key_t) ||
+          modulus.len != kRsa3072NumWords) {
+        return OTCRYPTO_RECOV_ERR;
+      }
+      rsa_3072_public_key_t *pk = (rsa_3072_public_key_t *)public_key->key;
+      modulus_eq = hardened_memeq(modulus.data, pk->n.data, modulus.len);
+      return OTCRYPTO_OK;
+    }
+    case kOtcryptoRsaSize4096: {
+      if (public_key->key_length != sizeof(rsa_4096_public_key_t) ||
+          modulus.len != kRsa4096NumWords) {
+        return OTCRYPTO_RECOV_ERR;
+      }
+      rsa_4096_public_key_t *pk = (rsa_4096_public_key_t *)public_key->key;
+      modulus_eq = hardened_memeq(modulus.data, pk->n.data, modulus.len);
+      return OTCRYPTO_OK;
+    }
     default:
       return OTCRYPTO_BAD_ARGS;
   }
@@ -544,10 +558,34 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor_async_start(
       return rsa_keygen_from_cofactor_2048_start(&pk, cf);
     }
     case kOtcryptoRsaSize3072: {
-      return OTCRYPTO_NOT_IMPLEMENTED;
+      if (cofactor_share0.len != sizeof(rsa_3072_short_t) / sizeof(uint32_t) ||
+          modulus.len != kRsa3072NumWords) {
+        return OTCRYPTO_BAD_ARGS;
+      }
+      rsa_3072_short_t *cf = (rsa_3072_short_t *)cofactor_share0.data;
+      // TODO: RSA keys are currently unblinded, so combine the shares.
+      for (size_t i = 0; i < cofactor_share1.len; i++) {
+        cf->data[i] ^= cofactor_share1.data[i];
+      }
+      rsa_3072_public_key_t pk;
+      hardened_memcpy(pk.n.data, modulus.data, modulus.len);
+      pk.e = e;
+      return rsa_keygen_from_cofactor_3072_start(&pk, cf);
     }
     case kOtcryptoRsaSize4096: {
-      return OTCRYPTO_NOT_IMPLEMENTED;
+      if (cofactor_share0.len != sizeof(rsa_4096_short_t) / sizeof(uint32_t) ||
+          modulus.len != kRsa4096NumWords) {
+        return OTCRYPTO_BAD_ARGS;
+      }
+      rsa_4096_short_t *cf = (rsa_4096_short_t *)cofactor_share0.data;
+      // TODO: RSA keys are currently unblinded, so combine the shares.
+      for (size_t i = 0; i < cofactor_share1.len; i++) {
+        cf->data[i] ^= cofactor_share1.data[i];
+      }
+      rsa_4096_public_key_t pk;
+      hardened_memcpy(pk.n.data, modulus.data, modulus.len);
+      pk.e = e;
+      return rsa_keygen_from_cofactor_4096_start(&pk, cf);
     }
     default:
       return OTCRYPTO_BAD_ARGS;
@@ -593,10 +631,18 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor_async_finalize(
       break;
     }
     case kOtcryptoRsaSize3072: {
-      return OTCRYPTO_NOT_IMPLEMENTED;
+      rsa_3072_public_key_t *pk = (rsa_3072_public_key_t *)public_key->key;
+      rsa_3072_private_key_t *sk =
+          (rsa_3072_private_key_t *)private_key->keyblob;
+      HARDENED_TRY(rsa_keygen_from_cofactor_3072_finalize(pk, sk));
+      break;
     }
     case kOtcryptoRsaSize4096: {
-      return OTCRYPTO_NOT_IMPLEMENTED;
+      rsa_4096_public_key_t *pk = (rsa_4096_public_key_t *)public_key->key;
+      rsa_4096_private_key_t *sk =
+          (rsa_4096_private_key_t *)private_key->keyblob;
+      HARDENED_TRY(rsa_keygen_from_cofactor_4096_finalize(pk, sk));
+      break;
     }
     default:
       // Invalid key size.

@@ -46,15 +46,21 @@ static const otbn_addr_t kOtbnVarRsaCofactor =
 OTBN_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_GEN_RSA_2048);
 OTBN_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_COFACTOR_RSA_2048);
 OTBN_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_GEN_RSA_3072);
+OTBN_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_COFACTOR_RSA_3072);
 OTBN_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_GEN_RSA_4096);
+OTBN_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_COFACTOR_RSA_4096);
 static const uint32_t kOtbnRsaModeGen2048 =
     OTBN_ADDR_T_INIT(run_rsa_keygen, MODE_GEN_RSA_2048);
 static const uint32_t kOtbnRsaModeCofactor2048 =
     OTBN_ADDR_T_INIT(run_rsa_keygen, MODE_COFACTOR_RSA_2048);
 static const uint32_t kOtbnRsaModeGen3072 =
     OTBN_ADDR_T_INIT(run_rsa_keygen, MODE_GEN_RSA_3072);
+static const uint32_t kOtbnRsaModeCofactor3072 =
+    OTBN_ADDR_T_INIT(run_rsa_keygen, MODE_COFACTOR_RSA_3072);
 static const uint32_t kOtbnRsaModeGen4096 =
     OTBN_ADDR_T_INIT(run_rsa_keygen, MODE_GEN_RSA_4096);
+static const uint32_t kOtbnRsaModeCofactor4096 =
+    OTBN_ADDR_T_INIT(run_rsa_keygen, MODE_COFACTOR_RSA_4096);
 
 enum {
   /* Fixed public exponent for generated keys. This exponent is 2^16 + 1, also
@@ -212,6 +218,78 @@ status_t rsa_keygen_from_cofactor_2048_start(
 status_t rsa_keygen_from_cofactor_2048_finalize(
     rsa_2048_public_key_t *public_key, rsa_2048_private_key_t *private_key) {
   HARDENED_TRY(keygen_finalize(kOtbnRsaModeCofactor2048, kRsa2048NumWords,
+                               public_key->n.data, private_key->p.data,
+                               private_key->q.data, private_key->d_p.data,
+                               private_key->d_q.data, private_key->i_q.data));
+
+  // Set the public exponent to F4, the only exponent our key generation
+  // algorithm supports.
+  public_key->e = kFixedPublicExponent;
+
+  return OTCRYPTO_OK;
+}
+
+status_t rsa_keygen_from_cofactor_3072_start(
+    const rsa_3072_public_key_t *public_key, const rsa_3072_short_t *cofactor) {
+  // Only the exponent F4 is supported.
+  if (public_key->e != kFixedPublicExponent) {
+    return OTCRYPTO_BAD_ARGS;
+  }
+
+  // Load the RSA key generation app. Fails if OTBN is non-idle.
+  HARDENED_TRY(otbn_load_app(kOtbnAppRsaKeygen));
+
+  // Write the modulus and cofactor into DMEM.
+  HARDENED_TRY(otbn_dmem_write(ARRAYSIZE(public_key->n.data),
+                               public_key->n.data, kOtbnVarRsaN));
+  HARDENED_TRY(otbn_dmem_write(ARRAYSIZE(cofactor->data), cofactor->data,
+                               kOtbnVarRsaCofactor));
+
+  // Set mode and start OTBN.
+  uint32_t mode = kOtbnRsaModeCofactor3072;
+  HARDENED_TRY(otbn_dmem_write(kOtbnRsaModeWords, &mode, kOtbnVarRsaMode));
+  return otbn_execute();
+}
+
+status_t rsa_keygen_from_cofactor_3072_finalize(
+    rsa_3072_public_key_t *public_key, rsa_3072_private_key_t *private_key) {
+  HARDENED_TRY(keygen_finalize(kOtbnRsaModeCofactor3072, kRsa3072NumWords,
+                               public_key->n.data, private_key->p.data,
+                               private_key->q.data, private_key->d_p.data,
+                               private_key->d_q.data, private_key->i_q.data));
+
+  // Set the public exponent to F4, the only exponent our key generation
+  // algorithm supports.
+  public_key->e = kFixedPublicExponent;
+
+  return OTCRYPTO_OK;
+}
+
+status_t rsa_keygen_from_cofactor_4096_start(
+    const rsa_4096_public_key_t *public_key, const rsa_4096_short_t *cofactor) {
+  // Only the exponent F4 is supported.
+  if (public_key->e != kFixedPublicExponent) {
+    return OTCRYPTO_BAD_ARGS;
+  }
+
+  // Load the RSA key generation app. Fails if OTBN is non-idle.
+  HARDENED_TRY(otbn_load_app(kOtbnAppRsaKeygen));
+
+  // Write the modulus and cofactor into DMEM.
+  HARDENED_TRY(otbn_dmem_write(ARRAYSIZE(public_key->n.data),
+                               public_key->n.data, kOtbnVarRsaN));
+  HARDENED_TRY(otbn_dmem_write(ARRAYSIZE(cofactor->data), cofactor->data,
+                               kOtbnVarRsaCofactor));
+
+  // Set mode and start OTBN.
+  uint32_t mode = kOtbnRsaModeCofactor4096;
+  HARDENED_TRY(otbn_dmem_write(kOtbnRsaModeWords, &mode, kOtbnVarRsaMode));
+  return otbn_execute();
+}
+
+status_t rsa_keygen_from_cofactor_4096_finalize(
+    rsa_4096_public_key_t *public_key, rsa_4096_private_key_t *private_key) {
+  HARDENED_TRY(keygen_finalize(kOtbnRsaModeCofactor4096, kRsa4096NumWords,
                                public_key->n.data, private_key->p.data,
                                private_key->q.data, private_key->d_p.data,
                                private_key->d_q.data, private_key->i_q.data));
