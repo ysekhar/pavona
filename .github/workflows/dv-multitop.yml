@@ -1,0 +1,410 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+name: DVSim Multi-top block-level tests
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        default: "zerorisc-dv"
+      run-type:
+        type: string
+        required: true
+      item:
+        type: string
+        required: true
+      tool:
+        type: string
+        default: "vcs"
+      coverage:
+        type: boolean
+        default: false
+      concurrent-jobs:
+        type: number
+        default: 0
+      priority:
+        type: number
+        # Smaller numbers are higher priority.
+        default: 10
+      verilator-version:
+        # Use a verilator version that supports pyUVM tests.
+        default: "5.036"
+        type: string
+      vcs-version:
+        default: "U-2023.03-SP2"
+        type: string
+      timeout-minutes:
+        type: number
+        default: 1440  # 24 hours
+
+#permissions:
+#  # Needed for determining HWIP set to run
+#  pull-requests: read
+
+jobs:
+  dv-multitop:
+    name: Run Multitop Design Verification Tests
+    runs-on:
+      group: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    # TODO: Filter DV jobs based on changed paths (`if-changed`).
+    - name: Prepare environment
+      id: prepare-env
+      uses: ./.github/actions/prepare-env
+      with:
+        service_account_json: '${{ secrets.BAZEL_CACHE_CREDS }}'
+        ts-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+        ts-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+        vcs-version: ${{ inputs.vcs-version }}
+        verilator-version: ${{ inputs.verilator-version }}
+    # Unit tests for UVCs
+    - name: TL Agent unit tests
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-tl-agent
+        hjson: hw/dv/sv/tl_agent/dv/tl_agent_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    - name: TL Agent unit tests (pyUVM/Verilator)
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-tl-agent
+        hjson: hw/dv/py/tl_agent/dv/tl_agent_python_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+        tool: verilator
+
+    # Multi-top IPs
+
+    # AES Unmasked
+    - name: AES Unmasked
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-aes-unmasked
+        hjson: hw/ip/aes/dv/aes_unmasked_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # AES Masked
+    - name: AES Masked
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-aes-masked
+        hjson: hw/ip/aes/dv/aes_masked_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # AON Timer
+    - name: AON Timer
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-aon-timer
+        hjson: hw/ip/aon_timer/dv/aon_timer_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # CSRNG
+    - name: CSRNG
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-csrng
+        hjson: hw/ip/csrng/dv/csrng_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # EDN
+    - name: EDN
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-edn
+        hjson: hw/ip/edn/dv/edn_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # HMAC
+    - name: HMAC
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-hmac
+        hjson: hw/ip/hmac/dv/hmac_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # I2C
+    - name: I2C
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-i2c
+        hjson: hw/ip/i2c/dv/i2c_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # Key Manager
+    - name: Key Manager
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-keymgr
+        hjson: hw/ip/keymgr/dv/keymgr_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # KMAC Masked
+    - name: KMAC Masked
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-kmac-masked
+        hjson: hw/ip/kmac/dv/kmac_masked_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # KMAC Unmasked
+    - name: KMAC Unmasked
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-kmac-unmasked
+        hjson: hw/ip/kmac/dv/kmac_unmasked_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # OTBN
+    - name: OTBN
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-otbn
+        hjson: hw/ip/otbn/dv/uvm/otbn_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # Prim Alert
+    - name: Prim Alert
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-prim-alert
+        hjson: hw/ip/prim/dv/prim_alert/prim_alert_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # Prim Esc
+    - name: Prim Esc
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-prim-esc
+        hjson: hw/ip/prim/dv/prim_esc/prim_esc_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # Prim Lfsr
+    - name: Prim Lfsr
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-prim-lfsr
+        hjson: hw/ip/prim/dv/prim_lfsr/prim_lfsr_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # Prim Present
+    - name: Prim Present
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-prim-present
+        hjson: hw/ip/prim/dv/prim_present/prim_present_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # Prim Prince
+    - name: Prim Prince
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-prim-prince
+        hjson: hw/ip/prim/dv/prim_prince/prim_prince_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # ROM Controller 32kB
+    - name: ROM Controller 32kB
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-rom-ctrl-32kb
+        hjson: hw/ip/rom_ctrl/dv/rom_ctrl_32kB_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # ROM Controller 64kB
+    - name: ROM Controller 64kB
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-rom-ctrl-64kb
+        hjson: hw/ip/rom_ctrl/dv/rom_ctrl_64kB_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # RV Timer
+    - name: RV Timer
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-rv-timer
+        hjson: hw/ip/rv_timer/dv/rv_timer_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # SPI Host
+    - name: SPI Host
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-spi-host
+        hjson: hw/ip/spi_host/dv/spi_host_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # SPI Device (1R1W)
+    - name: SPI Device (1R1W)
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-spi-device-1r1w
+        hjson: hw/ip/spi_device/dv/spi_device_1r1w_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # SRAM Controller (Main)
+    - name: SRAM Controller (Main)
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-sram-ctrl-main
+        hjson: hw/ip/sram_ctrl/dv/sram_ctrl_main_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # SRAM Controller (Retention)
+    - name: SRAM Controller (Retention)
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-sram-ctrl-ret
+        hjson: hw/ip/sram_ctrl/dv/sram_ctrl_ret_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+    # UART
+    - name: UART
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-uart
+        hjson: hw/ip/uart/dv/uart_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+  dv-spisi:
+    name: Run SPISI Design Verification Tests
+    runs-on:
+      group: zerorisc-dv-spisi 
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Prepare environment
+      id: prepare-env
+      uses: ./.github/actions/prepare-env
+      with:
+        service_account_json: '${{ secrets.BAZEL_CACHE_CREDS }}'
+        ts-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+        ts-oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+        vcs-version: ${{ inputs.vcs-version }}
+    # Flash SPISI
+    - name: Flash SPISI
+      if: ${{ success() || failure() }}
+      uses: ./.github/actions/dvsim
+      with:
+        run-type: ${{ inputs.run-type }}
+        sim-name: ${{ inputs.run-type }}-dv-flash-spisi
+        hjson: hw/ip/flash_spisi/dv/flash_spisi_sim_cfg.hjson
+        item: ${{ inputs.item }}
+        coverage: ${{ inputs.coverage }}
+        concurrent-jobs: ${{ inputs.concurrent-jobs }}
+        priority: ${{ inputs.priority }}
+        fusesoc-core-path: /tools/secrets/spisi
