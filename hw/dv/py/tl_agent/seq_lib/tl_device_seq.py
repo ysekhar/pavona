@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 from cocotb.triggers import Event, First, Timer
 from dv_lib.dv_base_seq import dv_base_seq
-from dv_lib.dv_verbosity import UVM_LOW
+from pyuvm import UVM_LOW
 
 from ..tl_agent_cfg import tl_agent_cfg
 from ..tl_sequencer import tl_sequencer

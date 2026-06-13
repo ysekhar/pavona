@@ -87,11 +87,11 @@
   ]
 
   run_pass_patterns: [
-    "DV_TEST_STATUS: PASSED",
+    "\\b(DV_)?TEST_STATUS: PASSED\\b",
     "^\\s*\\*\\* TESTS=[0-9]+ PASS=[0-9]+ FAIL=0 SKIP=[0-9]+.*$"
   ]
   run_fail_patterns: [
-    "DV_TEST_STATUS: FAILED",
+    "\\b(DV_)?TEST_STATUS: FAILED\\b",
     "^\\s*\\*\\* TESTS=[0-9]+ PASS=[0-9]+ FAIL=[1-9][0-9]* SKIP=[0-9]+.*$"
   ]
 

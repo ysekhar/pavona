@@ -1,8 +1,9 @@
-# pyUVM DV Master Release 0.1
+# pyUVM DV Experimental Release 0.1
 
 ## Summary
 
-This release introduces the first consolidated Python UVM DV framework for the repository. It establishes a reusable `dv_lib` foundation, adds protocol interfaces and agents for TileLink and clock/reset control, integrates Python RAL support, and connects pyUVM block-level environments into the existing `dvsim` and Verilator-based simulation flow.
+This release introduces the first consolidated Python UVM DV framework for the repository. 
+It establishes a reusable `dv_lib` foundation, adds protocol interfaces and agents for TileLink and clock/reset control, integrates Python RAL support, and connects pyUVM block-level environments into the existing `dvsim` and Verilator-based simulation flow.
 
 ## Major Additions
 
@@ -43,7 +44,8 @@ This release also includes deadlock fixes, regression bring-up, and coverage clo
 
 ### Clock/reset agent
 
-The release adds `hw/dv/py/clk_rst_agent` as a reusable clock/reset control component. This agent centralizes clock generation, reset control, delay injection, and reset-oriented sequencing, and is used to simplify protocol environments that need structured reset behavior.
+The release adds `hw/dv/py/clk_rst_agent` as a reusable clock/reset control component. 
+This agent centralizes clock generation, reset control, delay injection, and reset-oriented sequencing, and is used to simplify protocol environments that need structured reset behavior.
 
 ### Python RAL and register overlays
 
@@ -77,31 +79,33 @@ The release adds pyUVM coverage collection and reporting support, including:
 
 ## Architectural Changes
 
-The most significant architectural cleanup in this release is the removal of ConfigDB-based wiring from the Python DV flow. Configuration and runtime connectivity are now handled more directly through environment and agent configuration objects. This reduces hidden coupling, makes object dependencies clearer, and simplifies reset-sensitive agent composition.
+The most significant architectural change is the removal of ConfigDB-based wiring from the Python DV flow compared to SV DV flow. 
+Configuration and runtime connectivity are now handled more directly through environment and agent configuration objects. 
+This reduces hidden coupling, makes object dependencies clearer, and simplifies reset-sensitive agent composition.
 
 The TileLink environment was also reworked to instantiate and rely on the new `clk_rst_agent`, rather than carrying ad hoc clock/reset handling internally.
 
 ## Stability and Parity Work
 
-Late-cycle work in this branch focused on making the Python DV stack behave more like the existing SV-UVM infrastructure:
+Python DV stack now behaves more like the existing SV-UVM infrastructure:
 
-- logging semantics were updated to match SV expectations more closely
+- logging semantics were enhanced to match SV expectations more closely
 - verbosity behavior was refined
 - reset-domain and vif handle issues were fixed
 - reset testing was enabled and stabilized
 - log output was cleaned up for release use
-- license headers were normalized across the new Python DV files
 
 ## Validation
 
-This release snapshot was validated with the following regression flow. Validation was performed with Python 3.12, using Verilator as the simulator.
+This release snapshot was validated with the following regression flow. 
+Validation was performed with Python 3.12, using Verilator as the simulator.
 
 ```bash
 source <python-3.12-venv>/bin/activate
 PATH=<simulator-bin-dir>:$PATH \
 ./util/dvsim/dvsim.py \
-  --scratch-root /tmp/codex-dvsim-r5 \
-  ./hw/dv/py/tl_agent/dv/tl_agent_python_sim_cfg.hjson \
+  --scratch-root <tmp_dir> \
+    \
   --run-opts "+max_quit_count=40 +print_char_len=80" \
   -i all \
   --cov \

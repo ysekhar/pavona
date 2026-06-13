@@ -10,11 +10,17 @@ monitor reset safe.
 from typing import TypeVar, Generic, Optional, Any, Callable, List, cast
 import cocotb
 from cocotb.task import CancelledError
-from pyuvm import uvm_analysis_port, uvm_monitor, uvm_component, uvm_sequence_item
+from pyuvm import (
+    UVM_LOW,
+    UVM_MEDIUM,
+    resolve_uvm_verbosity,
+    uvm_analysis_port,
+    uvm_component,
+    uvm_monitor,
+    uvm_sequence_item,
+)
 
-from .dv_base_core_report import dv_base_core_report
 from .dv_rst_domain import dv_rst_domain
-from .dv_verbosity import UVM_LOW, UVM_MEDIUM
 
 
 # Type variables for generic monitor
@@ -99,9 +105,8 @@ class dv_base_monitor(uvm_monitor, Generic[ITEM_T, REQ_ITEM_T, RSP_ITEM_T, CFG_T
         # Pythonic callback registry - simple list of callables
         # Supports functions, methods, lambda, or any callable object
         self._callbacks: List[Callable[[ITEM_T], None]] = []
-        self.reporting = dv_base_core_report(self, parent=parent, default_verbosity=UVM_LOW)
-        self.uvm_verbosity: int = self.reporting.verbosity
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
+        self.set_report_verbosity(self.uvm_verbosity)
 
 
     def build_phase(self):
@@ -115,8 +120,8 @@ class dv_base_monitor(uvm_monitor, Generic[ITEM_T, REQ_ITEM_T, RSP_ITEM_T, CFG_T
     def start_of_simulation_phase(self):
         """Resolve reset_domain before run-time activity starts."""
         super().start_of_simulation_phase()
-        self.uvm_verbosity = self.reporting.apply_cfg(self.cfg)
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
+        self.set_report_verbosity(self.uvm_verbosity)
 
         if self.vif is None:
              self.uvm_report.fatal(self.get_name(), f"vif == None "

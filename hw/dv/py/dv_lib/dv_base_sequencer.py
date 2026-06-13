@@ -10,10 +10,14 @@ for communication between monitors and sequences.
 from typing import TypeVar, Generic, Optional, TYPE_CHECKING
 import cocotb
 from cocotb.task import CancelledError
-from pyuvm import uvm_sequencer, uvm_phase, uvm_component, uvm_sequence_item
-
-from .dv_base_core_report import dv_base_core_report
-from .dv_verbosity import UVM_LOW
+from pyuvm import (
+    UVM_LOW,
+    resolve_uvm_verbosity,
+    uvm_component,
+    uvm_phase,
+    uvm_sequence_item,
+    uvm_sequencer,
+)
 
 if TYPE_CHECKING:
     from pyuvm import uvm_tlm_fifo
@@ -50,9 +54,8 @@ class dv_base_sequencer(uvm_sequencer, Generic[ITEM_T, CFG_T, RSP_ITEM_T]):
         # These FIFOs are created conditionally in build_phase
         self.req_analysis_fifo: Optional['uvm_tlm_fifo[ITEM_T]'] = None
         self.rsp_analysis_fifo: Optional['uvm_tlm_fifo[RSP_ITEM_T]'] = None
-        self.reporting = dv_base_core_report(self, parent=parent, default_verbosity=UVM_LOW)
-        self.uvm_verbosity: int = self.reporting.verbosity
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
+        self.set_report_verbosity(self.uvm_verbosity)
     
     def build_phase(self):
         """Build phase - create analysis FIFOs if configured."""
@@ -62,8 +65,8 @@ class dv_base_sequencer(uvm_sequencer, Generic[ITEM_T, CFG_T, RSP_ITEM_T]):
         if not self.is_virtual_sequencer and self.cfg is None:
             self.uvm_report.fatal(self.get_name(), f"cfg handle is null.")
         elif self.cfg is not None:
-            self.uvm_verbosity = self.reporting.apply_cfg(self.cfg)
-            self.uvm_report = self.reporting.uvm_report
+            self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
+            self.set_report_verbosity(self.uvm_verbosity)
             # Import here to avoid circular dependencies
             from pyuvm import uvm_tlm_fifo
             

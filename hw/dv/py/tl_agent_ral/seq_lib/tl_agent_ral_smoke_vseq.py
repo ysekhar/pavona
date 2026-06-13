@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from cocotb.triggers import Timer
-from dv_lib.dv_verbosity import UVM_LOW
+from pyuvm import UVM_LOW
 
 from tl_agent.dv.env.seq_lib.tl_agent_base_vseq import tl_agent_base_vseq
 

@@ -13,7 +13,7 @@ from interfaces import ClkRstIf, TlIf
 
 from dv_lib.dv_base_test import dv_base_test
 from dv_lib.dv_rst_domain import dv_rst_domain
-from dv_lib.dv_verbosity import UVM_INFO, UVM_LOW
+from pyuvm import UVM_INFO, UVM_LOW
 
 from ..env.tl_agent_env import tl_agent_env
 from ..env.tl_agent_env_cfg import tl_agent_env_cfg

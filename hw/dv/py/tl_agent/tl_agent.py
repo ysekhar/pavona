@@ -8,7 +8,7 @@ from typing import Optional
 
 from pyuvm import ConfigDB, uvm_agent, uvm_component
 
-from dv_lib.dv_verbosity import UVM_LOW, UvmReporter, resolve_uvm_verbosity
+from pyuvm import UVM_LOW, resolve_uvm_verbosity
 
 from .tl_agent_cfg import tl_agent_cfg
 from .tl_device_agent import tl_device_agent
@@ -23,7 +23,7 @@ class tl_agent(uvm_agent):
         self.cfg: Optional[tl_agent_cfg] = None
         self.impl = None
         self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
-        self.uvm_report = UvmReporter(self.logger, self.uvm_verbosity)
+        self.set_report_verbosity(self.uvm_verbosity)
 
     def build_phase(self):
         super().build_phase()
@@ -31,7 +31,7 @@ class tl_agent(uvm_agent):
         if self.cfg is None:
             self.uvm_report.fatal(self.get_name(), f"cfg is None")
         self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
-        self.uvm_report.set_verbosity(self.uvm_verbosity)
+        self.set_report_verbosity(self.uvm_verbosity)
 
         mode = str(getattr(self.cfg, "if_mode", "Host")).lower()
         impl_cls = tl_device_agent if mode == "device" else tl_host_agent

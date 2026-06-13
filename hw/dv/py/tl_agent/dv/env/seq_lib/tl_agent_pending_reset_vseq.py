@@ -10,7 +10,7 @@ from cocotb.triggers import Timer
 
 from clk_rst_agent.seq_lib.delay_seq import delay_seq
 from clk_rst_agent.seq_lib.reset_seq import reset_seq
-from dv_lib.dv_verbosity import UVM_LOW, UVM_MEDIUM
+from pyuvm import UVM_LOW, UVM_MEDIUM
 
 from .tl_agent_base_vseq import tl_agent_base_vseq
 from ....seq_lib.tl_device_seq import tl_device_seq
@@ -26,35 +26,37 @@ class tl_agent_pending_reset_vseq(tl_agent_base_vseq):
     async def reset_trigger_thread(self) -> None:
         p_sequencer = self._get_p_sequencer()
         if p_sequencer.clk_rst_sequencer_h is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer clk_rst_sequencer_h is missing")
+            self.uvm_report.fatal(
+                self.get_name(), "virtual sequencer clk_rst_sequencer_h is missing"
+            )
         if p_sequencer.delay_sequencer_h is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer delay_sequencer_h is missing")
+            self.uvm_report.fatal(self.get_name(), "virtual sequencer delay_sequencer_h is missing")
 
-        self.uvm_report.info(self.get_name(), "Waiting 10 cycles before triggering reset", UVM_MEDIUM)
+        self.uvm_report.info(
+            self.get_name(), "Waiting 10 cycles before triggering reset", UVM_MEDIUM
+        )
         del_seq = delay_seq("delay_sequence:pending_reset", delay_time_steps=10)
-        del_seq.logger = self._logger()
         await p_sequencer.delay_sequencer_h.start_sequence(del_seq)
 
-        self.uvm_report.info(self.get_name(), "Triggering reset with pending requests expected", UVM_MEDIUM)
+        self.uvm_report.info(
+            self.get_name(), "Triggering reset with pending requests expected", UVM_MEDIUM
+        )
         rst_seq = reset_seq("pending_reset_sequence")
-        rst_seq.logger = self._logger()
         await p_sequencer.clk_rst_sequencer_h.start_sequence(rst_seq)
 
     async def main_thread(self) -> None:
-        self.uvm_report.info(self.get_name(), f"main_thread start", UVM_LOW)
+        self.uvm_report.info(self.get_name(), "main_thread start", UVM_LOW)
         p_sequencer = self._get_p_sequencer()
         if p_sequencer.device_seqr is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer device_seqr is missing")
+            self.uvm_report.fatal(self.get_name(), "virtual sequencer device_seqr is missing")
 
         device_seq = tl_device_seq("device_seq_pending_reset")
-        device_seq.logger = self._logger()
         device_seq.min_rsp_delay = 50
         device_seq.max_rsp_delay = 80
         p_sequencer.device_seqr.spawn_sequence(device_seq)
 
         try:
             host_seq = tl_host_seq("host_seq_pending_reset")
-            host_seq.logger = self._logger()
             host_seq.req_cnt = 16
             host_seq.min_req_delay = 0
             host_seq.max_req_delay = 0
@@ -64,4 +66,4 @@ class tl_agent_pending_reset_vseq(tl_agent_base_vseq):
             await Timer(1, unit="us")
         finally:
             self.stop_device_seq()
-        self.uvm_report.info(self.get_name(), f"main_thread done", UVM_LOW)
+        self.uvm_report.info(self.get_name(), "main_thread done", UVM_LOW)

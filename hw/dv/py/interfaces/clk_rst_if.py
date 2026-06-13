@@ -18,7 +18,7 @@ from typing import Any, Optional
 import cocotb
 from cocotb.triggers import ClockCycles, FallingEdge, First, RisingEdge, Timer
 
-from dv_lib.dv_verbosity import UVM_LOW, UvmReporter
+from pyuvm import UVM_LOW, uvm_reporter
 
 
 class RstScheme(IntEnum):
@@ -42,7 +42,7 @@ class ClkRstIf:
         self._dut = dut
         self._prefix = prefix
         self.logger = logger
-        self.uvm_report = UvmReporter(logger, UVM_LOW)
+        self.uvm_report = uvm_reporter(logger, UVM_LOW)
         self.msg_id = f"ClkRstIf:{if_name}"
 
         # Drive enable (set by set_active)

@@ -6,7 +6,7 @@
 
 from math import log2
 
-from dv_lib.dv_verbosity import UVM_LOW
+from pyuvm import UVM_LOW
 
 from .tl_host_seq import tl_host_seq
 from ..tl_seq_item import (

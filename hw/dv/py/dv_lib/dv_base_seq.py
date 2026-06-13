@@ -12,7 +12,7 @@ from .dv_base_agent_cfg import dv_base_agent_cfg
 from .dv_base_sequence_core import dv_base_sequence_core
 from .dv_base_sequencer import dv_base_sequencer
 from .dv_seeded_rng import ensure_seeded_rng
-from .dv_verbosity import resolve_uvm_verbosity
+from pyuvm import resolve_uvm_verbosity
 
 REQ_T = TypeVar("REQ_T", bound=uvm_sequence_item)
 RSP_T = TypeVar("RSP_T", bound=uvm_sequence_item)
@@ -40,12 +40,12 @@ class dv_base_seq(dv_base_sequence_core, Generic[SEQUENCER_T, CFG_T, REQ_T, RSP_
     def _bind_from_sequencer(self) -> None:
         sequencer = getattr(self, "sequencer", None)
         if sequencer is None or getattr(sequencer, "cfg", None) is None:
-            self.uvm_report.fatal(self.get_name(), f"sequencer.cfg is required")
-        self.bind_logger_from_sequencer()
+            self.uvm_report.fatal(self.get_name(), "sequencer.cfg is required")
         self.cfg = sequencer.cfg
         self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
-        self.uvm_report.set_verbosity(self.uvm_verbosity)
+        self.set_report_verbosity(self.uvm_verbosity)
 
     async def body(self) -> None:
-        self.uvm_report.fatal(self.get_name(), f"override body() in sequences derived from dv_base_seq"
+        self.uvm_report.fatal(
+            self.get_name(), "override body() in sequences derived from dv_base_seq"
         )

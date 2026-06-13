@@ -10,10 +10,15 @@ functionality by monitoring reset and properly terminating sequences when reset 
 from typing import TypeVar, Generic, Optional, Type, TYPE_CHECKING
 import cocotb
 from cocotb.triggers import Timer
-from pyuvm import uvm_agent, uvm_phase, uvm_component, ConfigDB
-
-from .dv_base_core_report import dv_base_core_report
-from .dv_verbosity import UVM_LOW, UVM_MEDIUM
+from pyuvm import (
+    ConfigDB,
+    UVM_LOW,
+    UVM_MEDIUM,
+    resolve_uvm_verbosity,
+    uvm_agent,
+    uvm_component,
+    uvm_phase,
+)
 
 if TYPE_CHECKING:
     # Forward reference for reset domain - actual implementation should provide
@@ -66,9 +71,8 @@ class dv_base_agent(uvm_agent, Generic[CFG_T, DRIVER_T, SEQUENCER_T, MONITOR_T, 
 
         # Handle for the long-running coroutine that watches reset assertions.
         self._agent_reset_monitor_task: Optional[cocotb.Task] = None
-        self.reporting = dv_base_core_report(self, parent=parent, default_verbosity=UVM_LOW)
-        self.uvm_verbosity: int = self.reporting.verbosity
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
+        self.set_report_verbosity(self.uvm_verbosity)
 
 
     def build_phase(self):
@@ -78,8 +82,8 @@ class dv_base_agent(uvm_agent, Generic[CFG_T, DRIVER_T, SEQUENCER_T, MONITOR_T, 
         # Get CFG_T object from ConfigDB
         if self.cfg is None:
             self.uvm_report.fatal(self.get_name(), f"cfg is None. Resolve this before proceeding")
-        self.uvm_verbosity = self.reporting.apply_cfg(self.cfg)
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
+        self.set_report_verbosity(self.uvm_verbosity)
         self.uvm_report.info(self.get_name(), f"cfg = {self.cfg}", UVM_MEDIUM)
 
         # Check if agent is active or passive

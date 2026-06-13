@@ -11,11 +11,17 @@ from typing import TypeVar, Generic, Optional, Any, cast
 import cocotb
 from cocotb.triggers import Timer
 from cocotb.task import CancelledError
-from pyuvm import uvm_driver, uvm_component, uvm_object, uvm_sequence_item
+from pyuvm import (
+    UVM_LOW,
+    UVM_MEDIUM,
+    resolve_uvm_verbosity,
+    uvm_component,
+    uvm_driver,
+    uvm_object,
+    uvm_sequence_item,
+)
 
-from .dv_base_core_report import dv_base_core_report
 from .dv_rst_domain import dv_rst_domain
-from .dv_verbosity import UVM_LOW, UVM_MEDIUM
 
 
 # Type variables for generic driver
@@ -61,16 +67,15 @@ class dv_base_driver(uvm_driver, Generic[ITEM_T, CFG_T, RSP_ITEM_T]):
         self.processing_item = False
         self._reset_task: Optional[cocotb.Task] = None
         self._drive_task: Optional[cocotb.Task] = None
-        self.reporting = dv_base_core_report(self, parent=parent, default_verbosity=UVM_LOW)
-        self.uvm_verbosity: int = self.reporting.verbosity
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
+        self.set_report_verbosity(self.uvm_verbosity)
 
 
     def start_of_simulation_phase(self):
         """Resolve reset_domain before run-time activity starts."""
         super().start_of_simulation_phase()
-        self.uvm_verbosity = self.reporting.apply_cfg(self.cfg)
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
+        self.set_report_verbosity(self.uvm_verbosity)
 
         if self.vif is None:
             self.uvm_report.fatal(self.get_name(), f"reset_domain == None "

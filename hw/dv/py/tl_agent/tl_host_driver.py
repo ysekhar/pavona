@@ -11,7 +11,7 @@ import cocotb
 from cocotb.triggers import Event, RisingEdge
 
 from dv_lib.dv_base_driver import dv_base_driver
-from dv_lib.dv_verbosity import UVM_DEBUG
+from pyuvm import UVM_DEBUG
 
 from .tl_agent_cfg import tl_agent_cfg
 from .tl_seq_item import tl_seq_item

@@ -14,7 +14,7 @@ from cocotb.triggers import Event, RisingEdge
 from pyuvm import uvm_analysis_port
 
 from dv_lib.dv_base_monitor import dv_base_monitor
-from dv_lib.dv_verbosity import UVM_DEBUG
+from pyuvm import UVM_DEBUG
 
 from .tl_seq_item import TlSeqItemChannel, tl_seq_item
 from .tl_agent_cfg import tl_agent_cfg

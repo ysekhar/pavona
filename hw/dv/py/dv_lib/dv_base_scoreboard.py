@@ -19,11 +19,9 @@ from __future__ import annotations
 from typing import Any, Generic, Optional, TypeVar
 
 import cocotb
-from pyuvm import ConfigDB, uvm_component
+from pyuvm import ConfigDB, UVM_LOW, resolve_uvm_verbosity, uvm_component
 
-from .dv_base_core_report import dv_base_core_report
 from .dv_base_env_cfg import dv_base_env_cfg
-from .dv_verbosity import UVM_LOW
 
 
 RAL_T = TypeVar("RAL_T", bound=Any)
@@ -46,9 +44,8 @@ class dv_base_scoreboard(uvm_component, Generic[RAL_T, CFG_T, COV_T]):
         self._monitor_reset_task: Optional[cocotb.Task] = None
         self._sample_resets_task: Optional[cocotb.Task] = None
         self._in_run_phase: bool = False
-        self.reporting = dv_base_core_report(self, parent=parent, default_verbosity=UVM_LOW)
-        self.uvm_verbosity: int = self.reporting.verbosity
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
+        self.set_report_verbosity(self.uvm_verbosity)
 
     def build_phase(self):
         super().build_phase()
@@ -56,8 +53,8 @@ class dv_base_scoreboard(uvm_component, Generic[RAL_T, CFG_T, COV_T]):
             self.cfg = ConfigDB().get(self, "", "cfg")
         if self.cfg is None:
             self.uvm_report.fatal(self.get_name(), f"failed to get cfg from ConfigDB")
-        self.uvm_verbosity = self.reporting.apply_cfg(self.cfg)
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
+        self.set_report_verbosity(self.uvm_verbosity)
         self.ral = getattr(self.cfg, "ral", None)
 
     async def run_phase(self):

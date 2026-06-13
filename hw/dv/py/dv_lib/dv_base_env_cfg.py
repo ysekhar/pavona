@@ -27,6 +27,7 @@ class dv_base_env_cfg(uvm_object):
 
     def __init__(self, name: str = "cfg") -> None:
         super().__init__(name)
+        self._cfg_uvm_verbosity: int | None = None
 
         # Activity and scoreboard
         self.is_active: bool = True
@@ -62,6 +63,16 @@ class dv_base_env_cfg(uvm_object):
         # Reset domains: default and per-RAL
         self.reset_domain: Optional[Any] = None
         # self.reset_domains: Dict[str, Any] = {}
+
+    @property
+    def uvm_verbosity(self) -> int | None:
+        return self._cfg_uvm_verbosity
+
+    @uvm_verbosity.setter
+    def uvm_verbosity(self, verbosity: int | None) -> None:
+        self._cfg_uvm_verbosity = verbosity
+        if verbosity is not None:
+            self.set_report_verbosity(verbosity)
 
     def pre_randomize(self) -> None:
         """Call before randomizing; ensures initialize() was run."""

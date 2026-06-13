@@ -25,7 +25,7 @@ dependencies = [
   "pytest-timeout ~= 2.1",
   "pytest ~= 7.2",
   "pyyaml ~= 6.0",
-  "rich==12.6.0", # maximum version compatible with Python 3.6.8 (used on CentOS7 nightly regression machines)
+  "rich==15.0.0", # pyucis in the pyuvm extra requires rich >= 13.
   "semantic_version==2.10.0",
   "tabulate==0.8.10",
   "typer==0.6.1",
@@ -79,6 +79,16 @@ dependencies = [
 
   # Dependency license checker
   "pip-licenses==5.0.0",
+]
+
+[project.optional-dependencies]
+# Dependencies for the cocotb / pyUVM DV flow. The full resolved environment
+# is locked in python-requirements-pyuvm.txt.
+pyuvm = [
+  "cocotb==2.0.1",
+  "pyucis==0.2.0.22787133465",
+  "pyuvm==4.0.1",
+  "pyvsc==0.9.4.22122858116",
 ]
 
 [tool.setuptools]

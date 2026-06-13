@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from dv_lib.dv_verbosity import UVM_LOW
+from pyuvm import UVM_LOW
 
 from ....tl_seq_item import Get
 from .tl_agent_base_vseq import tl_agent_base_vseq

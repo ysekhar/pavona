@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dv_lib.dv_base_seq import dv_base_seq
-from dv_lib.dv_verbosity import UVM_MEDIUM
+from pyuvm import UVM_MEDIUM
 
 from tl_agent.tl_agent_cfg import tl_agent_cfg
 from tl_agent.tl_sequencer import tl_sequencer

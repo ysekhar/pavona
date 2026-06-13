@@ -5,7 +5,7 @@
 """Reset sequence."""
 
 from dv_lib.dv_base_seq import dv_base_seq
-from dv_lib.dv_verbosity import UVM_LOW
+from pyuvm import UVM_LOW
 
 from ..clk_rst_agent_cfg import clk_rst_agent_cfg
 from ..clk_rst_item import ClkRstItemType, clk_rst_item

@@ -10,7 +10,7 @@ from typing import Set
 
 import cocotb
 from dv_lib.dv_base_driver import dv_base_driver
-from dv_lib.dv_verbosity import UVM_LOW
+from pyuvm import UVM_LOW
 
 from .clk_rst_agent_cfg import clk_rst_agent_cfg
 from .clk_rst_item import ClkRstItemType, clk_rst_item

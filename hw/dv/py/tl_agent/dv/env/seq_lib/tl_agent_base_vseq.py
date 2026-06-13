@@ -6,12 +6,10 @@
 
 from __future__ import annotations
 
-from cocotb.triggers import Timer, with_timeout
-
 from clk_rst_agent.seq_lib.delay_seq import delay_seq
 from clk_rst_agent.seq_lib.reset_seq import reset_seq
 from dv_lib.dv_base_vseq import dv_base_vseq
-from dv_lib.dv_verbosity import UVM_LOW, UVM_MEDIUM
+from pyuvm import UVM_LOW, UVM_MEDIUM
 
 from ....tl_agent_config_parameters import tl_agent_config_parameters
 from ..tl_agent_env_cfg import tl_agent_env_cfg
@@ -20,7 +18,6 @@ from ...tests.tl_agent_test_seq_parameters import tl_agent_test_seq_parameters
 from ..tl_agent_virtual_sequencer import tl_agent_virtual_sequencer
 from ....seq_lib.tl_device_seq import tl_device_seq
 from ....seq_lib.tl_host_seq import tl_host_seq
-
 
 
 class tl_agent_base_vseq(
@@ -51,12 +48,14 @@ class tl_agent_base_vseq(
     async def reset_trigger_thread(self) -> None:
         p_sequencer = self._get_p_sequencer()
         if p_sequencer.clk_rst_sequencer_h is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer clk_rst_sequencer_h is missing")
+            self.uvm_report.fatal(
+                self.get_name(), "virtual sequencer clk_rst_sequencer_h is missing"
+            )
         if p_sequencer.delay_sequencer_h is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer delay_sequencer_h is missing")
+            self.uvm_report.fatal(self.get_name(), "virtual sequencer delay_sequencer_h is missing")
 
         if self.config_params is None:
-            self.uvm_report.fatal(self.get_name(), f"config_params is required for reset delay")
+            self.uvm_report.fatal(self.get_name(), "config_params is required for reset delay")
         rand_reset_delay = int(self.config_params.rand_reset_delay)
 
         self.uvm_report.info(
@@ -65,21 +64,18 @@ class tl_agent_base_vseq(
             UVM_MEDIUM,
         )
         del_seq = delay_seq("delay_sequence:reset_trigger", delay_time_steps=rand_reset_delay)
-        del_seq.logger = self._logger()
         await p_sequencer.delay_sequencer_h.start_sequence(del_seq)
 
         self.uvm_report.info(self.get_name(), "Triggering Reset", UVM_MEDIUM)
         rst_seq = reset_seq("reset_sequence")
-        rst_seq.logger = self._logger()
         await p_sequencer.clk_rst_sequencer_h.start_sequence(rst_seq)
 
     async def run_host_seq(self) -> None:
         p_sequencer = self._get_p_sequencer()
         if p_sequencer.host_seqr is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer host_seqr is missing")
+            self.uvm_report.fatal(self.get_name(), "virtual sequencer host_seqr is missing")
 
         host_seq = tl_host_seq("host_seq")
-        host_seq.logger = self._logger()
         min_req_cnt = self.min_req_cnt
         max_req_cnt = self.max_req_cnt
         if self.config_params is not None:
@@ -96,16 +92,14 @@ class tl_agent_base_vseq(
     async def start_host_seq(self, host_seq) -> None:
         p_sequencer = self._get_p_sequencer()
         if p_sequencer.host_seqr is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer host_seqr is missing")
-        host_seq.logger = self._logger()
+            self.uvm_report.fatal(self.get_name(), "virtual sequencer host_seqr is missing")
         await p_sequencer.host_seqr.start_sequence(host_seq)
 
     def start_device_seq(self) -> None:
         p_sequencer = self._get_p_sequencer()
         if p_sequencer.device_seqr is None:
-            self.uvm_report.fatal(self.get_name(), f"virtual sequencer device_seqr is missing")
+            self.uvm_report.fatal(self.get_name(), "virtual sequencer device_seqr is missing")
         device_seq = tl_device_seq("device_seq")
-        device_seq.logger = self._logger()
         out_of_order_rsp = self.out_of_order_rsp
         if self.config_params is not None:
             out_of_order_rsp = bool(int(self.config_params.out_of_order_rsp))
@@ -127,9 +121,12 @@ class tl_agent_base_vseq(
         self.start_device_seq()
         try:
             if p_sequencer.delay_sequencer_h is None:
-                self.uvm_report.fatal(self.get_name(), f"virtual sequencer delay_sequencer_h is missing")
-            main_active_delay_seq = delay_seq("delay_sequence:main_thread_active", delay_time_steps=101)
-            main_active_delay_seq.logger = self._logger()
+                self.uvm_report.fatal(
+                    self.get_name(), "virtual sequencer delay_sequencer_h is missing"
+                )
+            main_active_delay_seq = delay_seq(
+                "delay_sequence:main_thread_active", delay_time_steps=101
+            )
             await p_sequencer.delay_sequencer_h.start_sequence(main_active_delay_seq)
 
             num_trans = 1 if self.test_params is None else self.test_params.num_trans

@@ -5,7 +5,6 @@
 """Reset-safe base virtual sequence."""
 
 from importlib import import_module
-import logging
 from typing import Generic, Optional, Type, TypeVar, cast
 
 import cocotb
@@ -19,7 +18,7 @@ from .dv_base_env_cov import dv_base_env_cov
 from .dv_cocotb_utils import get_plusarg
 from .dv_config_parameters import dv_config_parameters
 from .dv_test_seq_parameters import EnableType, dv_test_seq_parameters
-from .dv_verbosity import UVM_LOW, UVM_MEDIUM, resolve_uvm_verbosity
+from pyuvm import UVM_MEDIUM, resolve_uvm_verbosity
 
 RAL_T = TypeVar("RAL_T")
 CFG_T = TypeVar("CFG_T", bound=dv_base_env_cfg)
@@ -48,7 +47,6 @@ class dv_base_vseq(
         self.test_params: Optional[TEST_PARAMS_T] = None
         self.config_params: Optional[CONFIG_PARAMS_T] = None
         self._reset_monitor_task: Optional[cocotb.Task] = None
-        self.logger = None
 
     async def dut_init(self) -> None:
         self.uvm_report.fatal(
@@ -79,17 +77,15 @@ class dv_base_vseq(
             self.uvm_report.fatal(self.get_name(), f"""'{name}' is not a uvm_sequence""")
         return seq
 
-
     def _get_p_sequencer(self) -> VIRTUAL_SEQUENCER_T:
         if self.p_sequencer is not None:
             return self.p_sequencer
         sequencer = getattr(self, "sequencer", None)
         if sequencer is None:
-            self.uvm_report.fatal(self.get_name(), f"""Did you forget to set the sequencer?""")
+            self.uvm_report.fatal(self.get_name(), """Did you forget to set the sequencer?""")
 
         self.p_sequencer = cast(VIRTUAL_SEQUENCER_T, sequencer)
         return self.p_sequencer
-
 
     def _bind_from_sequencer(self) -> None:
         p_sequencer = self._get_p_sequencer()
@@ -98,23 +94,13 @@ class dv_base_vseq(
         if self.cfg is not None:
             self.ral = cast(Optional[RAL_T], self.cfg.ral)
             self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
-            self.uvm_report.set_verbosity(self.uvm_verbosity)
-
-    def _bind_logger_from_sequencer(self) -> None:
-        self.bind_logger_from_sequencer()
-
-    def _logger(self) -> logging.Logger:
-        logger = getattr(self, "logger", None)
-        if logger is not None:
-            return logger
-        return logging.getLogger(self.get_name())
+            self.set_report_verbosity(self.uvm_verbosity)
 
     async def pre_body(self) -> None:
         await super().pre_body()
         self._bind_from_sequencer()
-        self._bind_logger_from_sequencer()
         if self.cfg is None:
-            self.uvm_report.fatal(self.get_name(), f"p_sequencer.cfg is required")
+            self.uvm_report.fatal(self.get_name(), "p_sequencer.cfg is required")
 
     async def post_start(self) -> None:
         await super().post_start()
@@ -135,7 +121,7 @@ class dv_base_vseq(
 
     def randomize_test_params(self) -> None:
         if self.test_params is None:
-            self.uvm_report.fatal(self.get_name(), f"test_params is not initialized")
+            self.uvm_report.fatal(self.get_name(), "test_params is not initialized")
         try:
             if self._is_reset_testing_forced():
                 with self.test_params.randomize_with():
@@ -143,16 +129,18 @@ class dv_base_vseq(
             else:
                 self.test_params.randomize()
         except Exception as err:
-            self.uvm_report.fatal(self.get_name(), f"DV Test Parameters Randomization Failed: {err}"
+            self.uvm_report.fatal(
+                self.get_name(), f"DV Test Parameters Randomization Failed: {err}"
             )
 
     def randomize_config_params(self) -> None:
         if self.config_params is None:
-            self.uvm_report.fatal(self.get_name(), f"config_params is not initialized")
+            self.uvm_report.fatal(self.get_name(), "config_params is not initialized")
         try:
             self.config_params.randomize()
         except Exception as err:
-            self.uvm_report.fatal(self.get_name(), f"DV Config Parameters Randomization Failed: {err}"
+            self.uvm_report.fatal(
+                self.get_name(), f"DV Config Parameters Randomization Failed: {err}"
             )
 
     def freeze_test_params(self) -> None:
@@ -162,8 +150,6 @@ class dv_base_vseq(
     async def body(self) -> None:
         if self.cfg is None:
             self._bind_from_sequencer()
-        if self.logger is None:
-             self.uvm_report.fatal(self.get_name(), f"logger is not set")
 
         self.uvm_report.info(self.get_name(), "body() - Starting", UVM_MEDIUM)
         self.test_params = self.create_test_params()
@@ -179,7 +165,7 @@ class dv_base_vseq(
             self.randomize_config_params()
             self.test_params.num_reset_loops -= 1
 
-            if self.in_reset == True:
+            if self.in_reset:
                 await self.cfg.reset_domain.wait_reset_deassert()
 
             if self.test_params.do_dut_init:
@@ -199,7 +185,8 @@ class dv_base_vseq(
                 and self.test_params.reset_testing == EnableType.ENABLE
             ):
                 if not main_task.done():
-                    self.uvm_report.info(self.get_name(), 
+                    self.uvm_report.info(
+                        self.get_name(),
                         "body() - killing main_thread()",
                         UVM_MEDIUM,
                     )
@@ -209,12 +196,14 @@ class dv_base_vseq(
                     except CancelledError:
                         pass
                 else:
-                    self.uvm_report.warning(self.get_name(), 
+                    self.uvm_report.warning(
+                        self.get_name(),
                         "Reset testing enabled and main_thread() finished before "
                         "reset_trigger_thread()"
                     )
             else:
-                self.uvm_report.info(self.get_name(), 
+                self.uvm_report.info(
+                    self.get_name(),
                     "Waiting for main_thread() to complete",
                     UVM_MEDIUM,
                 )
@@ -225,13 +214,15 @@ class dv_base_vseq(
     async def monitor_reset(self) -> None:
         """Wait for POR release, then spawn a background reset monitor."""
         if self.cfg is None or self.cfg.reset_domain is None:
-            self.uvm_report.fatal(self.get_name(), f"cfg.reset_domain is required")
+            self.uvm_report.fatal(self.get_name(), "cfg.reset_domain is required")
 
         self.uvm_report.info(self.get_name(), "Waiting for POR Release", UVM_MEDIUM)
         await self.cfg.reset_domain.wait_reset_assert()
         await self.cfg.reset_domain.wait_reset_deassert()
 
-        self.uvm_report.info(self.get_name(), "POR Released - Starting Reset Monitoring", UVM_MEDIUM)
+        self.uvm_report.info(
+            self.get_name(), "POR Released - Starting Reset Monitoring", UVM_MEDIUM
+        )
         self.in_reset = False
 
         if self._reset_monitor_task is None or self._reset_monitor_task.done():
@@ -239,17 +230,18 @@ class dv_base_vseq(
 
     async def _run_reset_thread_iteration(self) -> None:
         if self.test_params is None:
-            self.uvm_report.fatal(self.get_name(), f"test_params not initialized")
+            self.uvm_report.fatal(self.get_name(), "test_params not initialized")
         if (
             self.test_params.num_reset_loops != 0
             and self.test_params.reset_testing == EnableType.ENABLE
         ):
             await self.reset_trigger_thread()
             if self.cfg is None or self.cfg.reset_domain is None:
-                self.uvm_report.fatal(self.get_name(), f"cfg.reset_domain is required")
+                self.uvm_report.fatal(self.get_name(), "cfg.reset_domain is required")
             await self.cfg.reset_domain.wait_reset_assert()
 
-        self.uvm_report.info(self.get_name(), 
+        self.uvm_report.info(
+            self.get_name(),
             "dv_base_seq::_run_reset_thread_iteration() - Exiting",
             UVM_MEDIUM,
         )
@@ -258,7 +250,9 @@ class dv_base_vseq(
         while True:
             assert self.cfg is not None and self.cfg.reset_domain is not None
             await self.cfg.reset_domain.wait_reset_assert()
-            self.uvm_report.info(self.get_name(), "Reset Assertion - Stopping Sequences", UVM_MEDIUM)
+            self.uvm_report.info(
+                self.get_name(), "Reset Assertion - Stopping Sequences", UVM_MEDIUM
+            )
             self.in_reset = True
             await self.cfg.reset_domain.wait_reset_deassert()
             self.in_reset = False
@@ -269,7 +263,7 @@ class dv_base_vseq(
         )
 
     async def main_thread(self) -> None:
-        self.uvm_report.fatal(self.get_name(), f"Derived sequence needs to provide main_thread()")
+        self.uvm_report.fatal(self.get_name(), "Derived sequence needs to provide main_thread()")
 
     def handle_reset_assertion(self) -> None:
         self.uvm_report.fatal(self.get_name(), f"""

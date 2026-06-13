@@ -8,15 +8,20 @@ from __future__ import annotations
 
 from typing import Any, Generic, Optional, Type, TypeVar
 
-from pyuvm import ConfigDB, uvm_component, uvm_env
+from pyuvm import (
+    ConfigDB,
+    UVM_LOW,
+    UVM_MEDIUM,
+    resolve_uvm_verbosity,
+    uvm_component,
+    uvm_env,
+)
 
-from .dv_base_core_report import dv_base_core_report
 from .dv_base_env_cfg import dv_base_env_cfg
 from .dv_base_env_cov import dv_base_env_cov
 from .dv_base_scoreboard import dv_base_scoreboard
 from .dv_base_virtual_sequencer import dv_base_virtual_sequencer
 from .dv_rst_domain import dv_rst_domain
-from .dv_verbosity import UVM_LOW, UVM_MEDIUM
 
 
 CFG_T = TypeVar("CFG_T", bound=dv_base_env_cfg)
@@ -47,9 +52,8 @@ class dv_base_env(
         self.virtual_sequencer: Optional[VIRTUAL_SEQUENCER_T] = None
         self.scoreboard: Optional[SCOREBOARD_T] = None
         self.cov: Optional[COV_T] = None
-        self.reporting = dv_base_core_report(self, parent=parent, default_verbosity=UVM_LOW)
-        self.uvm_verbosity: int = self.reporting.verbosity
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity: int = int(getattr(parent, "uvm_verbosity", UVM_LOW))
+        self.set_report_verbosity(self.uvm_verbosity)
 
     def build_phase(self):
         super().build_phase()
@@ -57,8 +61,8 @@ class dv_base_env(
         if self.cfg is None:
             self.uvm_report.fatal(self.get_name(), f"""cfg is not set. Resolve this before
                                       procceeding""")
-        self.uvm_verbosity = self.reporting.apply_cfg(self.cfg)
-        self.uvm_report = self.reporting.uvm_report
+        self.uvm_verbosity = resolve_uvm_verbosity(self.uvm_verbosity, self.cfg)
+        self.set_report_verbosity(self.uvm_verbosity)
 
 
         if self.cfg.en_cov:
