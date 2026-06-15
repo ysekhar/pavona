@@ -123,6 +123,12 @@ A few examples of these are as follows:
   *  [TileLink agent](../../../../hw/dv/sv/tl_agent/README.md)
   *  [UART agent](../../../../hw/dv/sv/usb20_agent/README.md)
 
+### pyUVM Reset-Safe DV Infrastructure
+
+The repository also contains a Python / pyUVM DV infrastructure prototype under `hw/dv/py`.
+Its reset management follows the same Stop-Clean-Restart methodology as the SV-UVM reset-safe infrastructure, using cocotb tasks, reset-domain abstractions, and reset-aware base classes.
+See [Building Reset-Safe pyUVM Infrastructure for Open Silicon IPs](./building_reset_safe_pyuvm_infrastructure_for_open_silicon_ips.md) for the class map, reset flow, porting checklist, and TileLink worked example.
+
 ## DV Efforts
 
 Overall DV effort can be spread across 3 tiers:

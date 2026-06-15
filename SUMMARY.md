@@ -707,6 +707,7 @@
       - [Software Checklist](./sw/device/lib/dif/dif_rv_plic.md)
 
 - [Verification Methodology](./doc/contributing/dv/methodology/README.md)
+  - [Reset-Safe pyUVM Infrastructure](./doc/contributing/dv/methodology/building_reset_safe_pyuvm_infrastructure_for_open_silicon_ips.md)
   - [Security Countermeasure Verification Framework](./doc/contributing/dv/sec_cm_dv_framework/README.md)
   - [Formal Assertions](./hw/formal/README.md)
 

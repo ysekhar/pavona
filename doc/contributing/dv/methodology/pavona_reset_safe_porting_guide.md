@@ -583,6 +583,7 @@ After each reset, the override writes the `ALERT_EN` register with its power-on 
 
 - RFC-2025-01: [Reset Management in DV Testbenches](../../../../rfc/rfc-2026-01-DV-Reset-Management/rfc_2026_01_dv_reset_management.md)
 - [Building Scalable System Verilog UVM Infrastructure for Open Silicon IPs](./building_scalable_system_verilog_uvm_infrastructure_for_open_silicon_ips.md)
+- [Building Reset-Safe pyUVM Infrastructure for Open Silicon IPs](./building_reset_safe_pyuvm_infrastructure_for_open_silicon_ips.md)
 - `dv_rand_rst_safe_base_vseq.sv` — `hw/dv/sv/dv_lib/`
 - `cip_rand_rst_safe_base_vseq.sv` — `hw/dv/sv/cip_lib/seq_lib/`
 - `ac_range_check_rand_rst_safe_base_vseq.sv` — canonical reference implementation
