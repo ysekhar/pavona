@@ -26,8 +26,10 @@ class i2c_target_ack_stop_vseq extends i2c_target_smoke_vseq;
           forever begin
             wait(cfg.m_i2c_agent_cfg.ack_stop_det);
             cfg.m_i2c_agent_cfg.ack_stop_det = 0;
-            // When the monitor signals the ack-stop stimulus has occurred, we can then check
-            // that the DUT has correctly asserted it's 'unexp_stop' interrupt.
+            // The monitor observes the STOP before the DUT interrupt has propagated through
+            // intr_state and onto the interrupt pin. Wait for the interrupt before checking it.
+            `DV_WAIT(cfg.intr_vif.pins[UnexpStop],, cfg.spinwait_timeout_ns,
+                     "Timed out waiting for UnexpStop interrupt after ACK-then-STOP")
             check_one_intr(UnexpStop, 1);
             clear_interrupt(UnexpStop);
           end

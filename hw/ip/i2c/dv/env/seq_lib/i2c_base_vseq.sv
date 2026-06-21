@@ -1082,10 +1082,13 @@ class i2c_base_vseq extends cip_base_vseq #(
       if (xfer.bus_op == BusOpRead) begin
         acknack_e random_acknack;
 
-        // Ack-Stop test mode can introduce a non-normal ACK bit at the end of each read transfer.
-        // When enabled, randomly ACK or NACK the final byte of each individual read transfer.
-        `DV_CHECK_STD_RANDOMIZE_FATAL(random_acknack)
-        xfer.data_ack_q[$] = random_acknack;
+        // Ack-Stop test mode can introduce a non-normal ACK bit before STOP. Keep read transfers
+        // that end in RSTART on the normal NACK path, as ACK-then-RSTART is not the condition this
+        // sequence checks and can misalign the target-read scoreboard expectations.
+        if (xfer.stop) begin
+          `DV_CHECK_STD_RANDOMIZE_FATAL(random_acknack)
+          xfer.data_ack_q[$] = random_acknack;
+        end
 
         // In Ack-Stop test mode, we may need to overwrite the data byte from the pre-randomized
         // value. Values are pushed into the 'pre_feed_rd_data_q[$]' as needed, and overwrite read

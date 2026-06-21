@@ -107,6 +107,7 @@ module i2c_target_fsm import i2c_pkg::*;
   logic        stretch_tx;
   logic        nack_timeout;
   logic        expect_stop;
+  logic        ack_stop_pending_q, ack_stop_pending_d;
 
   // Target ACK control variables
   logic [8:0]  auto_ack_cnt_q, auto_ack_cnt_d; // Remaining bytes that may be auto ACK'd
@@ -185,6 +186,18 @@ module i2c_target_fsm import i2c_pkg::*;
       nack_transaction_q <= 1'b0;
     end else begin
       nack_transaction_q <= nack_transaction_d;
+    end
+  end
+
+  // Track the window after a host ACKs a target-read byte until the host either
+  // terminates the transfer with a START/STOP or NACKs a later byte. A STOP in
+  // that window is an ACK-then-STOP condition and should raise unexp_stop even
+  // if the target FSM is otherwise in a state where a STOP is expected.
+  always_ff @ (posedge clk_i or negedge rst_ni) begin : clk_ack_stop_pending
+    if (!rst_ni) begin
+      ack_stop_pending_q <= 1'b0;
+    end else begin
+      ack_stop_pending_q <= ack_stop_pending_d;
     end
   end
 
@@ -323,7 +336,7 @@ module i2c_target_fsm import i2c_pkg::*;
   // During a host issued read, a stop was received without first seeing a nack.
   // This may be harmless but is technically illegal behavior, notify software.
   assign event_unexp_stop_o = target_enable_i & xfer_for_us_q & rw_bit_q &
-                              stop_detect_i & !expect_stop;
+                              stop_detect_i & (!expect_stop | ack_stop_pending_q);
 
   // Record each transaction that gets NACK'd.
   assign event_target_nack_o = !nack_transaction_q && nack_transaction_d;
@@ -638,7 +651,7 @@ module i2c_target_fsm import i2c_pkg::*;
     end else if (target_enable_i && start_detect_i) begin
       restart_det_d = !target_idle_o;
       event_cmd_complete_o = xfer_for_us_q;
-    end else if (arbitration_lost_i) begin
+    end else if (arbitration_lost_i && !ack_stop_pending_q) begin
       nack_transaction_d = 1'b1;
       event_cmd_complete_o = xfer_for_us_q;
       event_tx_arbitration_lost_o = rw_bit_q;
@@ -678,6 +691,7 @@ module i2c_target_fsm import i2c_pkg::*;
     tcount_sel = tNoDelay;
     input_byte_clr = 1'b0;
     event_tx_stretch_o = 1'b0;
+    ack_stop_pending_d = ack_stop_pending_q;
 
     unique case (state_q)
       // Idle: initial state, SDA and SCL are released (high)
@@ -830,9 +844,11 @@ module i2c_target_fsm import i2c_pkg::*;
           // If host acknowledged, that means we must continue
           if (host_ack) begin
             state_d = TransmitWait;
+            ack_stop_pending_d = 1'b1;
           end else begin
             // If host nak'd then the transaction is about to terminate, go to a wait state
             state_d = WaitForStop;
+            ack_stop_pending_d = 1'b0;
           end
         end
       end
@@ -999,8 +1015,12 @@ module i2c_target_fsm import i2c_pkg::*;
       state_d = AcquireStart;
     end else if (stop_detect_i || bus_timeout_i) begin
       state_d = Idle;
-    end else if (arbitration_lost_i) begin
+    end else if (arbitration_lost_i && !ack_stop_pending_q) begin
       state_d = WaitForStop;
+    end
+
+    if (!target_enable_i || start_detect_i || stop_detect_i || bus_timeout_i) begin
+      ack_stop_pending_d = 1'b0;
     end
   end
 
