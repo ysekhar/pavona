@@ -27,6 +27,8 @@ class i2c_target_nack_txstretch_vseq extends i2c_target_runtime_base_vseq;
   `uvm_object_utils(i2c_target_nack_txstretch_vseq)
   `uvm_object_new
 
+  uint target_nack_count_exp;
+
   virtual task pre_start();
     super.pre_start();
 
@@ -69,9 +71,12 @@ class i2c_target_nack_txstretch_vseq extends i2c_target_runtime_base_vseq;
   endtask: initialization
 
   virtual task end_of_stim_hook();
+    target_nack_count_exp++;
+
     // Check the 'nack_count' csr, but a backdoor check to avoid clearing
     // the value due to the "RC" access for software.
-    csr_rd_check(.ptr(ral.target_nack_count), .compare_value(stim_cnt), .backdoor(1));
+    csr_rd_check(.ptr(ral.target_nack_count), .compare_value(target_nack_count_exp),
+                 .backdoor(1));
 
     // Cleanup for next iteration.
     empty_acqfifo();
@@ -84,7 +89,7 @@ class i2c_target_nack_txstretch_vseq extends i2c_target_runtime_base_vseq;
     // to check the "RC" access.
     if (timer_expired) begin
       `uvm_info(`gfn, "Reading 'target_nack_count via the frontdoor now.", UVM_MEDIUM)
-      csr_rd_check(.ptr(ral.target_nack_count), .compare_value(stim_cnt));
+      csr_rd_check(.ptr(ral.target_nack_count), .compare_value(target_nack_count_exp));
       `uvm_info(`gfn, "Reading 'target_nack_count via the frontdoor again, expecting zero.",
                 UVM_MEDIUM)
       csr_rd_check(.ptr(ral.target_nack_count), .compare_value(0));

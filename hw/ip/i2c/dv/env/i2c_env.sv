@@ -24,6 +24,7 @@ class i2c_env extends cip_base_env #(
     uvm_config_db#(i2c_agent_cfg)::set(this, "m_i2c_agent*", "cfg", cfg.m_i2c_agent_cfg);
     cfg.m_i2c_agent_cfg.en_cov = cfg.en_cov;
     cfg.m_i2c_agent_cfg.en_monitor = 1'b1;
+    cfg.m_i2c_agent_cfg.reset_domain = cfg.reset_domain;
 
     model = i2c_reference_model::type_id::create("model", this);
     model.cfg = cfg;

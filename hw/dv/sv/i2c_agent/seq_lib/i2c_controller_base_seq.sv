@@ -35,12 +35,14 @@ class i2c_controller_base_seq extends i2c_base_seq;
           finish_item(req);
         end
 
-        if (got_nack) begin
+        if (got_nack && !cfg.got_stop) begin
           `uvm_info(`gfn, "Got a NACK, driving a STOP symbol now to end the txn.", UVM_MEDIUM)
           `uvm_create_obj(REQ, req)
           req.drv_type = HostStop;
           start_item(req);
           finish_item(req);
+        end else if (got_nack) begin
+          `uvm_info(`gfn, "Got a NACK, but STOP was already observed.", UVM_MEDIUM)
         end
       end
     join

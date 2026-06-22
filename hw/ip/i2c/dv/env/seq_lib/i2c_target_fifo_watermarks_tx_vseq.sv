@@ -19,6 +19,10 @@ class i2c_target_fifo_watermarks_tx_vseq extends i2c_target_runtime_base_vseq;
   `uvm_object_utils(i2c_target_fifo_watermarks_tx_vseq)
   `uvm_object_new
 
+  constraint tx_thresh_c {
+    tx_thresh < I2C_TX_FIFO_DEPTH;
+  }
+
   // EXP
   uint tx_threshold_exp_state;
   uint tx_threshold_exp_intr_poscnt = 0;

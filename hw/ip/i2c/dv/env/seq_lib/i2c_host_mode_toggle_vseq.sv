@@ -98,7 +98,8 @@ class i2c_host_mode_toggle_vseq extends i2c_base_vseq;
       // Clear any pending Controller-Mode interrupts
       process_interrupts();
 
-      // Clear scoreboard FIFO
+      // Clear scoreboard state for the intentionally aborted controller-mode transaction.
+      cfg.scoreboard.reset_dut_controller_compare();
       cfg.scoreboard.target_mode_wr_exp_fifo.flush();
       cfg.scoreboard.target_mode_wr_obs_fifo.flush();
 

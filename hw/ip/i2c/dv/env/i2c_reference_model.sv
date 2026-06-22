@@ -117,6 +117,7 @@ class i2c_reference_model extends uvm_component;
   local i2c_item exp_rd_item, rd_pending_item;
   local i2c_item rd_pending_q[$]; // Helper-queue : holds partial read transactions
   local uint rdata_cnt = 0; // Count data-bytes read in a single transfer (DUT-Controller)
+  local uint controller_mode_reset_count = 0;
 
   // DUT-Target Operation
   //
@@ -529,12 +530,15 @@ class i2c_reference_model extends uvm_component;
   //
   virtual task create_controller_exp();
     i2c_item inp_xfer; // in_progress_xfer, from the i2c_monitor
+    uint reset_count;
+    bit reset_seen = 1'b0;
 
     // Wait until we have captured the entire in-progress transfer from the i2c_monitor.
     // Note. that we could do this by waiting on either of the full-transfer queues
     // 'controller_mode_{wr,rd}_obs_fifo', but in the future we will make use of the
     // intermediate states for prediction.
     controller_mode_in_progress_fifo.get(inp_xfer);
+    reset_count = controller_mode_reset_count;
     `DV_CHECK(inp_xfer.state inside {StNone, StStarted})
     `uvm_info(`gfn, $sformatf("create_controller_exp() : Got handle to inp_xfer item :\n%s",
       inp_xfer.sprint()), UVM_DEBUG)
@@ -546,20 +550,32 @@ class i2c_reference_model extends uvm_component;
           "create_controller_exp() got inp_xfer : (address=8'h%2x, rw=1'b%b (%0s))",
           inp_xfer.addr, inp_xfer.dir, inp_xfer.dir.name()), UVM_DEBUG)
 
-        wait(inp_xfer.state == StStopped);
-        `uvm_info(`gfn, "create_controller_exp() : Got inp_xfer.state == StStopped.", UVM_DEBUG)
+        wait(inp_xfer.state == StStopped || reset_count != controller_mode_reset_count);
+        if (reset_count != controller_mode_reset_count) begin
+          reset_seen = 1'b1;
+        end else begin
+          `uvm_info(`gfn, "create_controller_exp() : Got inp_xfer.state == StStopped.", UVM_DEBUG)
+        end
+
       end
-      // Optional (UVM_DEBUG) logging routine to print ongoing transfer state changes.
-      while(inp_xfer.state != StStopped) print_inp_xfer_state_changes(inp_xfer);
+      begin
+        // Optional (UVM_DEBUG) logging routine to print ongoing transfer state changes.
+        while(inp_xfer.state != StStopped && reset_count == controller_mode_reset_count) begin
+          print_inp_xfer_state_changes(inp_xfer);
+        end
+      end
     join_any
+
+    if (reset_seen || reset_count != controller_mode_reset_count) return;
 
     // At this point, we have captured the observed transfer from the i2c_monitor, but not
     // necessarily the whole csr-predicted transfer as we need to wait for the RXFIFO to be
     // read out to capture any read-data from the transfer.
 
-    // Now spawn a background process that waits for the csr_pred_xfer to complete, then
-    // fuses the data together and pushes the result to the scoreboard for comparison.
-    fork push_exp_when_ready(inp_xfer); join_none
+    // Wait for the csr_pred_xfer to complete, then fuse it with the observed bus transfer in
+    // transfer order. Multiple background consumers can race on exp_controller_mode_txn_q and pair
+    // the right data with the wrong ACK/NACK sequence.
+    push_exp_when_ready(inp_xfer);
 
   endtask : create_controller_exp
 
@@ -572,9 +588,12 @@ class i2c_reference_model extends uvm_component;
 
   virtual task push_exp_when_ready(i2c_item complete_bus_xfer);
     i2c_item csr_pred_xfer; // Prediction created by fmtfifo_write()/rdata_read() accesses
+    uint reset_count = controller_mode_reset_count;
 
     // Wait until we have made a prediction based on the CSR accesses only.
-    wait(exp_controller_mode_txn_q.size > 0);
+    wait(exp_controller_mode_txn_q.size > 0 || reset_count != controller_mode_reset_count);
+    if (reset_count != controller_mode_reset_count) return;
+
     csr_pred_xfer = exp_controller_mode_txn_q.pop_front();
 
     // We now have both bus and csr predictions. Join the data together to create the final
@@ -701,15 +720,35 @@ class i2c_reference_model extends uvm_component;
   endfunction
 
 
-  // Reset local fifos, queues and variables
-  virtual function void reset();
+  virtual function void reset_controller_mode();
+    controller_mode_reset_count++;
+
+    exp_controller_mode_txn_q = {};
+    prev_item = {};
     rd_pending_q = {};
     rd_pending_item.clear_all();
     exp_rd_item.clear_all();
     exp_wr_item.clear_all();
     rdata_cnt = 0;
+
+    controller_mode_wr_obs_fifo.flush();
+    controller_mode_rd_obs_fifo.flush();
+    controller_mode_in_progress_fifo.flush();
+  endfunction : reset_controller_mode
+
+  virtual function void reset_target_mode();
     txdata_wr = {};
     acqdata_rd = {};
+
+    target_mode_wr_obs_fifo.flush();
+    target_mode_rd_obs_fifo.flush();
+    target_mode_in_progress_fifo.flush();
+  endfunction : reset_target_mode
+
+  // Reset local fifos, queues and variables
+  virtual function void reset();
+    reset_controller_mode();
+    reset_target_mode();
 
     `uvm_info(`gfn, "i2c_reference_model is reset now.", UVM_LOW)
   endfunction : reset

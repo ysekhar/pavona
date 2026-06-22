@@ -111,6 +111,9 @@ class i2c_scoreboard extends cip_base_scoreboard #(
   // These events reset the comparison routines for DUT-Target transactions.
   uvm_event reset_dut_target_wr_compare;
   uvm_event reset_dut_target_rd_compare;
+  // These events reset the comparison routines for DUT-Controller transactions.
+  uvm_event reset_dut_controller_wr_compare;
+  uvm_event reset_dut_controller_rd_compare;
 
   // (Coverage only) Queue for fmtfifo data to be sampled
   i2c_item fmt_fifo_data_q[$];
@@ -149,6 +152,8 @@ class i2c_scoreboard extends cip_base_scoreboard #(
     target_mode_rd_obs_fifo = new("target_mode_rd_obs_fifo", this);
     reset_dut_target_rd_compare = new("reset_dut_target_rd_compare");
     reset_dut_target_wr_compare = new("reset_dut_target_wr_compare");
+    reset_dut_controller_rd_compare = new("reset_dut_controller_rd_compare");
+    reset_dut_controller_wr_compare = new("reset_dut_controller_wr_compare");
   endfunction: build_phase
 
   function void connect_phase(uvm_phase phase);
@@ -214,8 +219,32 @@ class i2c_scoreboard extends cip_base_scoreboard #(
             // WAIT_
             wait(cfg.clk_rst_vif.rst_n === 1'b1)
             fork
-              forever compare_controller_trans(BusOpWrite);
-              forever compare_controller_trans(BusOpRead);
+              forever begin
+                fork begin: iso_fork_wr
+                  fork
+                    compare_controller_trans(BusOpWrite);
+                    begin
+                      reset_dut_controller_wr_compare.wait_trigger();
+                      `uvm_info(`gfn, "dut_controller_wr_compare routine is reset now.",
+                                UVM_MEDIUM)
+                    end
+                  join_any
+                  disable fork;
+                end : iso_fork_wr join
+              end
+              forever begin
+                fork begin: iso_fork_rd
+                  fork
+                    compare_controller_trans(BusOpRead);
+                    begin
+                      reset_dut_controller_rd_compare.wait_trigger();
+                      `uvm_info(`gfn, "dut_controller_rd_compare routine is reset now.",
+                                UVM_MEDIUM)
+                    end
+                  join_any
+                  disable fork;
+                end : iso_fork_rd join
+              end
             join,
             // EXIT_
             @(negedge cfg.clk_rst_vif.rst_n),
@@ -683,22 +712,31 @@ class i2c_scoreboard extends cip_base_scoreboard #(
     end
   endfunction: target_rd_comp
 
+  virtual function void reset_dut_controller_compare();
+    model.reset_controller_mode();
+
+    reset_dut_controller_wr_compare.trigger();
+    reset_dut_controller_rd_compare.trigger();
+
+    controller_mode_wr_exp_fifo.flush();
+    controller_mode_wr_obs_fifo.flush();
+    controller_mode_rd_exp_fifo.flush();
+    controller_mode_rd_obs_fifo.flush();
+  endfunction : reset_dut_controller_compare
+
   // Reset local fifos, queues and variables
   virtual function void reset(string kind = "HARD");
     super.reset(kind);
 
     cfg.scoreboard.reset_dut_target_wr_compare.trigger();
     cfg.scoreboard.reset_dut_target_rd_compare.trigger();
+    cfg.scoreboard.reset_dut_controller_compare();
 
     dut_target_exp_read_transfer_id = 0;
     dut_target_obs_read_transfer_id = 0;
     dut_target_exp_write_transfer_id = 0;
     dut_target_obs_write_transfer_id = 0;
     dut_controller_transfer_id = 0;
-    controller_mode_wr_exp_fifo.flush();
-    controller_mode_wr_obs_fifo.flush();
-    controller_mode_rd_exp_fifo.flush();
-    controller_mode_rd_obs_fifo.flush();
     target_mode_wr_exp_fifo.flush();
     target_mode_wr_obs_fifo.flush();
     target_mode_rd_exp_fifo.flush();

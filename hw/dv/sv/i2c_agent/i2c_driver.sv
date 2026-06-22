@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-class i2c_driver extends dv_base_driver #(i2c_item, i2c_agent_cfg);
+class i2c_driver extends dv_rst_safe_base_driver #(i2c_item, i2c_agent_cfg);
   `uvm_component_utils(i2c_driver)
 
   `uvm_component_new
@@ -15,38 +15,37 @@ class i2c_driver extends dv_base_driver #(i2c_item, i2c_agent_cfg);
   // get an array with unique read data
   constraint rd_data_c { unique { rd_data }; }
 
-  virtual task reset_signals();
-    forever begin
-      @(negedge cfg.vif.rst_ni);
-      `uvm_info(`gfn, "\ndriver in reset progress", UVM_DEBUG)
-      release_bus();
-      @(posedge cfg.vif.rst_ni);
-      `uvm_info(`gfn, "\ndriver out of reset", UVM_DEBUG)
-    end
-  endtask : reset_signals
-
-  virtual task run_phase(uvm_phase phase);
-    fork
-      reset_signals();
-      get_and_drive();
-      begin
-        if (cfg.if_mode == Host) drive_scl();
-      end
-      begin
-        if (cfg.if_mode == Host) host_scl_pause_ctrl();
-      end
-    join_none
-  endtask
+  virtual function void reset_interface_and_driver();
+    `uvm_info(`gfn, "\ndriver in reset progress", UVM_DEBUG)
+    release_bus();
+    cfg.host_scl_start = 1'b0;
+    cfg.host_scl_stop = 1'b0;
+    cfg.host_scl_pause_ack = 1'b0;
+    scl_pause = 1'b0;
+  endfunction : reset_interface_and_driver
 
   virtual task get_and_drive();
+    if (cfg.if_mode == Host) begin
+      fork
+        drive_scl();
+        host_scl_pause_ctrl();
+        get_and_drive_items();
+      join
+    end else begin
+      get_and_drive_items();
+    end
+  endtask : get_and_drive
+
+  virtual task get_and_drive_items();
     i2c_item req;
     bit      sent_item;
-    @(posedge cfg.vif.rst_ni);
+    bit      agent_rst;
     forever begin
       if (cfg.if_mode == Device) release_bus();
       // driver drives bus per mode
-      seq_item_port.get_next_item(req);
+      get_next_item(req);
       sent_item = 1'b0;
+      agent_rst = 1'b0;
       fork
         begin: iso_fork
           fork
@@ -58,11 +57,6 @@ class i2c_driver extends dv_base_driver #(i2c_item, i2c_agent_cfg);
               endcase
               sent_item = 1'b1;
             end
-            // handle on-the-fly reset
-            begin
-              process_reset();
-              req.clear_all();
-            end
             begin
               // Agent hot reset. It only resets I2C agent.
               // The DUT functions normally without reset.
@@ -71,23 +65,24 @@ class i2c_driver extends dv_base_driver #(i2c_item, i2c_agent_cfg);
               wait(cfg.driver_rst);
               `uvm_info(`gfn, "drvdbg agent reset", UVM_MEDIUM)
               req.clear_all();
+              agent_rst = 1'b1;
             end
           join_any
           disable fork;
         end: iso_fork
       join
-      if (sent_item) seq_item_port.item_done();
+      if (sent_item || agent_rst) item_done();
       // When agent reset happens, flush all sequence items from sequencer request queue,
       // before it starts a new sequence.
       if (cfg.driver_rst) begin
         i2c_item dummy;
         do begin
           seq_item_port.try_next_item(dummy);
-          if (dummy != null) seq_item_port.item_done();
+          if (dummy != null) item_done();
         end while (dummy != null);
       end
     end
-  endtask : get_and_drive
+  endtask : get_and_drive_items
 
   // Task to drive bits on SDA from TB to DUT while DUT is operating in Target mode
   virtual task drive_host_data_bits(ref i2c_item req);
@@ -218,17 +213,11 @@ class i2c_driver extends dv_base_driver #(i2c_item, i2c_agent_cfg);
                                           random_stretch;
   endfunction : gen_num_stretch_host_clks
 
-  virtual task process_reset();
-    @(negedge cfg.vif.rst_ni);
-    release_bus();
-    `uvm_info(`gfn, "\n  driver is reset", UVM_DEBUG)
-  endtask : process_reset
-
-  virtual task release_bus();
+  virtual function void release_bus();
     `uvm_info(`gfn, "Driver released the bus", UVM_DEBUG)
     cfg.vif.scl_o = 1'b1;
     cfg.vif.sda_o = 1'b1;
-  endtask : release_bus
+  endfunction : release_bus
 
   task drive_scl();
     // This timeout is extremely long since read transactions will stretch

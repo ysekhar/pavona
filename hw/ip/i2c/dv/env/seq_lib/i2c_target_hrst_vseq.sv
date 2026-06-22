@@ -184,6 +184,15 @@ class i2c_target_hrst_vseq extends i2c_target_smoke_vseq;
       endcase
       driver_q.push_back(glitch_txn);
 
+      // Repeated-START glitches leave the bus in an active transfer. Terminate that transfer so
+      // the next test iteration can synchronize on got_stop and begin from an idle bus.
+      if (glitch == AddressByteStart) begin
+        i2c_item stop_txn;
+        `uvm_create_obj(i2c_item, stop_txn)
+        stop_txn.drv_type = HostStop;
+        driver_q.push_back(stop_txn);
+      end
+
       // There should be no entry in the ACQFIFO for an Address byte glitch, since this is a
       // new transaction that never completes addressing the target.
       // Therefore, we don't need to add any further drive stimulus items.
@@ -221,6 +230,15 @@ class i2c_target_hrst_vseq extends i2c_target_smoke_vseq;
         default: `uvm_fatal(`gfn, "Shouldn't get here!")
       endcase
       driver_q.push_back(glitch_txn);
+    end
+
+    // Repeated-START glitches leave the bus in an active transfer. Terminate that transfer so
+    // the next test iteration can synchronize on got_stop and begin from an idle bus.
+    if (glitch == WriteDataByteStart) begin
+      i2c_item stop_txn;
+      `uvm_create_obj(i2c_item, stop_txn)
+      stop_txn.drv_type = HostStop;
+      driver_q.push_back(stop_txn);
     end
 
   endfunction

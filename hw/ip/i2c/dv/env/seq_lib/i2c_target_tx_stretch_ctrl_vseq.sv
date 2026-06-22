@@ -43,6 +43,10 @@ class i2c_target_tx_stretch_ctrl_vseq extends i2c_target_runtime_base_vseq;
     // TX_PENDING will not be set in this case, and the interrupt-based checking
     // done below will fail in this case.
     cfg.min_xfer_len = 3;
+    cfg.min_data = cfg.min_xfer_len;
+    cfg.rs_pct = 0;
+    cfg.min_num_transfers = 1;
+    cfg.max_num_transfers = 1;
 
     // Disable ACK-Control mode
     cfg.ack_ctrl_en = 0;

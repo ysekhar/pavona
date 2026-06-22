@@ -29,7 +29,7 @@
 // target_collect_thread()
 // target_address_thread(), target_read_thread(), target_write_thread()
 //
-class i2c_monitor extends dv_base_monitor #(
+class i2c_monitor extends dv_rst_safe_base_monitor #(
     .ITEM_T (i2c_item),
     .CFG_T  (i2c_agent_cfg),
     .COV_T  (i2c_agent_cov)
@@ -80,41 +80,31 @@ class i2c_monitor extends dv_base_monitor #(
     target_mode_in_progress_port = new("target_mode_in_progress_port", this);
   endfunction : build_phase
 
-  virtual task wait_for_reset_and_drop_item();
-    @(negedge cfg.vif.rst_ni);
-    reset_state();
-  endtask : wait_for_reset_and_drop_item
-
-  virtual function void reset_state();
+  virtual function void reset_monitor();
     num_dut_tran = 0;
-    mon_dut_item.clear_all();
+    prev_item = null;
+    if (mon_dut_item != null) mon_dut_item.clear_all();
   endfunction
 
-  virtual task run_phase(uvm_phase phase);
+  virtual task collect_trans();
     `DV_CHECK(cfg.target_addr_mode == Addr7BitMode, "Only 7-bit addressing mode is supported!")
     wait(cfg.en_monitor);
-    wait(cfg.vif.rst_ni);
     if (cfg.if_mode == Host) begin
-      fork
-        forever controller_collect_thread();
-      join_none
+      forever controller_collect_thread();
     end else if (cfg.if_mode == Device) begin
       forever begin
         fork begin: iso_fork
           fork
             target_collect_thread();
-            begin // Monitor on-the-fly reset, clear all state if reset asserted
-              wait_for_reset_and_drop_item();
-              `uvm_info(`gfn, $sformatf("Monitor saw reset assertion, clearing state now:\n%s",
-                                        mon_dut_item.sprint()), UVM_DEBUG)
-            end
             forever perf_monitor(cfg.vif, cfg.start_perf_monitor, cfg.stop_perf_monitor);
           join_any
           disable fork;
         end: iso_fork join
       end
+    end else begin
+      `uvm_fatal(`gfn, $sformatf("Unsupported I2C interface mode: %0s", cfg.if_mode.name()))
     end
-  endtask : run_phase
+  endtask : collect_trans
 
   // Monitor SCL to measure the actual frequency of an I2C transaction.
   virtual task automatic perf_monitor(virtual i2c_if vif, uvm_event start, uvm_event stop);
@@ -375,29 +365,6 @@ class i2c_monitor extends dv_base_monitor #(
     `uvm_info(`gfn, $sformatf("target_write_thread() end: tran_id:%0d num_data:%0d",
                               mon_dut_item.tran_id, mon_dut_item.num_data), UVM_FULL)
   endtask : target_write_thread
-
-  // update of_to_end to prevent sim finished when there is any activity on the bus
-  // ok_to_end = 0 (bus busy) / 1 (bus idle)
-  virtual task monitor_ready_to_end();
-    if (cfg.if_mode == Host) begin
-      int scl_cnt = 0;
-      if (cfg.en_monitor) begin
-        ok_to_end = 0;
-      end
-      forever begin
-        @(cfg.vif.cb);
-        if (cfg.vif.scl_i) scl_cnt++;
-        else scl_cnt = 0;
-        if (scl_cnt > 100) ok_to_end = 1;
-      end
-    end else begin
-      forever begin
-        @(cfg.vif.scl_i or cfg.vif.sda_i or cfg.vif.scl_o or cfg.vif.sda_o);
-        ok_to_end = (cfg.vif.scl_i == 1'b1) && (cfg.vif.sda_i == 1'b1);
-      end
-    end
-  endtask : monitor_ready_to_end
-
 
   // This task is called in a loop to collect I2C Agent-Controller transfers.
   //

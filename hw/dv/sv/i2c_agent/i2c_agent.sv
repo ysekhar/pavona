@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-class i2c_agent extends dv_base_agent #(
+class i2c_agent extends dv_rst_safe_base_agent #(
       .CFG_T           (i2c_agent_cfg),
       .DRIVER_T        (i2c_driver),
       .SEQUENCER_T     (i2c_sequencer),
