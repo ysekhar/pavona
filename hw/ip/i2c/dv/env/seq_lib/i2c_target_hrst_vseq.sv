@@ -114,7 +114,13 @@ class i2c_target_hrst_vseq extends i2c_target_smoke_vseq;
 
     // Check all acqfifo entries have been read before beginning the next transfer.
     `DV_WAIT(`ALL_READS_OCCURRED,,, "Failed check for ALL_READS_OCCURRED")
-    `DV_WAIT(`ALL_ACQFIFO_READS_OCCURRED,,, "Failed check for ALL_ACQFIFO_READS_OCCURRED")
+    `DV_SPINWAIT(
+      while (!`ALL_ACQFIFO_READS_OCCURRED) begin
+        empty_acqfifo();
+        cfg.clk_rst_vif.wait_clks(1);
+      end,
+      "Failed check for ALL_ACQFIFO_READS_OCCURRED",
+      cfg.spinwait_timeout_ns)
 
     `uvm_info(`gfn, $sformatf("Starting trans(%0d)/num_trans(%0d) (glitch_txn_num=%0d)",
                               i + 1, num_trans, glitch_txn_num + 1), UVM_MEDIUM)

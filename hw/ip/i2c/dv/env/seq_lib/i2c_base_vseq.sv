@@ -756,7 +756,12 @@ class i2c_base_vseq extends cip_base_vseq #(
     // Wait until some amount of stimulus is generated that will read data from the DUT. Since we
     // choose the randomized data as part of stimulus randomization, we can't know what to write
     // until then!
-    `DV_WAIT(sent_rd_byte > 0,, cfg.spinwait_timeout_ns, "process_txq")
+    `DV_WAIT((sent_rd_byte > 0) || (sent_txn_cnt >= num_trans),, cfg.spinwait_timeout_ns,
+             "process_txq")
+    if (sent_rd_byte == 0) begin
+      `uvm_info(`gfn, "No read bytes generated; ending process_txq().", UVM_MEDIUM)
+      return;
+    end
     `DV_CHECK(cfg.m_i2c_agent_cfg.rcvd_rd_byte == 0)
 
     while (// The agent is expecting to read more data. Keep adding them to the TXFIFO.

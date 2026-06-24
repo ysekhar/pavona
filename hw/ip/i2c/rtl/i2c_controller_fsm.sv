@@ -101,6 +101,8 @@ module i2c_controller_fsm import i2c_pkg::*;
   logic        log_start;     // indicates start is been issued
   logic        log_stop;      // indicates stop is been issued
   logic        auto_stop_d, auto_stop_q; // Tracks whether a Stop symbol was autonomously generated.
+  logic        auto_stop_abort; // Auto-stop could not form because SDA remained low.
+  logic        host_stretch_abort; // Host was disabled while waiting on target clock stretch.
   logic        ctrl_symbol_failed; // If SCL pulls low before the controller can issue Start/Stop
 
   // Clock counter implementation
@@ -285,7 +287,8 @@ module i2c_controller_fsm import i2c_pkg::*;
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       trans_started <= '0;
-    end else if (trans_started && (!host_enable_i || event_arbitration_lost_o)) begin
+    end else if (trans_started &&
+                 (event_arbitration_lost_o || auto_stop_abort || host_stretch_abort)) begin
       trans_started <= '0;
     end else if (log_start) begin
       trans_started <= 1'b1;
@@ -337,6 +340,10 @@ module i2c_controller_fsm import i2c_pkg::*;
 
   state_e state_q, state_d;
 
+  assign host_stretch_abort = !host_enable_i && trans_started && stretch_predict_cnt_expired &&
+      !scl_i && ((state_q == SetupStart) || (state_q == ClockPulse) ||
+                 (state_q == ClockPulseAck) || (state_q == ReadClockPulse) ||
+                 (state_q == HostClockPulseAck) || (state_q == SetupStop));
 
   // Increment the NACK timeout count if the controller is halted in Idle and
   // the timeout hasn't yet occurred.
@@ -612,6 +619,7 @@ module i2c_controller_fsm import i2c_pkg::*;
     shift_data_en = 1'b0;
     req_restart = 1'b0;
     auto_stop_d = auto_stop_q;
+    auto_stop_abort = 1'b0;
 
     unique case (state_q)
       // Idle: initial state, SDA is released (high), and SCL is released if there is no ongoing
@@ -877,6 +885,14 @@ module i2c_controller_fsm import i2c_pkg::*;
         end else if (!scl_i && scl_i_q) begin
           // Failed to issue Stop before some other device could pull SCL low.
           state_d = Idle;
+        end else if (auto_stop_q && !host_enable_i && scl_i) begin
+          // Host mode is disabled and SCL is already released high. End auto-stop cleanup here
+          // rather than waiting for the HoldStop cycle if SDA cannot rise in time.
+          state_d = Idle;
+          auto_stop_d = 1'b0;
+          auto_stop_abort = 1'b1;
+          load_tcount = 1'b1;
+          tcount_sel = tNoDelay;
         end else if (tcount_q == 20'd1) begin
           state_d = HoldStop;
         end
@@ -899,6 +915,15 @@ module i2c_controller_fsm import i2c_pkg::*;
             load_tcount = 1'b1;
             tcount_sel = tNoDelay;
           end
+        end else if (auto_stop_q && scl_i) begin
+          // The controller released SCL/SDA for an automatic STOP, but another device still holds
+          // SDA low. Host mode is already disabled, so end controller cleanup without adding extra
+          // clocks that could advance the external target.
+          state_d = Idle;
+          auto_stop_d = 1'b0;
+          auto_stop_abort = 1'b1;
+          load_tcount = 1'b1;
+          tcount_sel = tNoDelay;
         end
       end
       // Active: continue while keeping SCL low
@@ -953,7 +978,19 @@ module i2c_controller_fsm import i2c_pkg::*;
       end
     endcase // unique case (state_q)
 
-    if (trans_started && (sda_interference_i || ctrl_symbol_failed)) begin
+    if (host_stretch_abort) begin
+      state_d = Idle;
+      load_tcount = 1'b1;
+      tcount_sel = tNoDelay;
+      bit_decr = 1'b0;
+      bit_clr = 1'b0;
+      byte_decr = 1'b0;
+      byte_clr = 1'b0;
+      read_byte_clr = 1'b0;
+      shift_data_en = 1'b0;
+      req_restart = 1'b0;
+      auto_stop_d = 1'b0;
+    end else if (trans_started && (sda_interference_i || ctrl_symbol_failed)) begin
       state_d = Idle;
     end
   end

@@ -37,9 +37,17 @@ class i2c_host_stress_all_vseq extends i2c_rx_tx_vseq;
   endtask : pre_start
 
   virtual task body();
+    int unsigned parent_seed;
+
     `uvm_info(`gfn, "\n\n=> start i2c_host_stress_all_vseq", UVM_DEBUG)
     print_seq_names(seq_names);
     initialization();
+    if (!$value$plusargs("ntb_random_seed=%0d", parent_seed)) begin
+      parent_seed = $urandom();
+      `uvm_info(`gfn, $sformatf(
+                "ntb_random_seed plusarg was not found; using generated child vseq seed %0d",
+                parent_seed), UVM_MEDIUM)
+    end
     for (int i = 1; i <= seq_names.size(); i++) begin
       seq_run_hist[seq_names[i-1]] = 0;
     end
@@ -69,6 +77,9 @@ class i2c_host_stress_all_vseq extends i2c_rx_tx_vseq;
       end
 
       i2c_vseq.set_sequencer(p_sequencer);
+      i2c_vseq.srandom(parent_seed);
+      `uvm_info(`gfn, $sformatf("\n  child vseq seed %0d for %s (%0d/%0d)",
+                                parent_seed, seq_name, i, num_runs), UVM_LOW)
       `DV_CHECK_RANDOMIZE_FATAL(i2c_vseq)
       case (seq_name)
         "i2c_common_vseq": begin
