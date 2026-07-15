@@ -35,7 +35,7 @@ The existing working Python prototype is rooted at:
 
 The execution model is:
 
-`dvsim -> Verilator -> cocotb harness -> pyUVM test -> Python dv_lib/dv_utils`
+`dvsim -> Verilator -> cocotb harness -> pyUVM test -> Python dv_lib`
 
 This is a simulator and testbench implementation change, not a regression-interface change.
 `dvsim` remains the top-level entrypoint for regressions.
@@ -54,7 +54,7 @@ That means preserving:
 - deterministic test status reporting for CI
 
 Where pyUVM or cocotb does not naturally emit behavior that `dvsim` expects, the gap is bridged in
-Python `dv_lib` / `dv_utils`, not pushed into ad hoc CI logic.
+pyuvm's reporting integration and Python `dv_lib`, not pushed into ad hoc CI logic.
 
 ## Python Test Selection Contract
 
@@ -122,12 +122,13 @@ Recommended compatibility outputs:
 - UVM-like error and fatal lines
 - a terminal pass/footer line compatible with `dvsim`
 - a terminal fail/footer line compatible with `dvsim`
-- `DV_TEST_STATUS: PASSED` or `DV_TEST_STATUS: FAILED` as a human-readable status line
+- `TEST_STATUS: PASSED` or `TEST_STATUS: FAILED` as a human-readable status line
 
 ### Current Python Status
 
-The shared Python report manager already emits `DV_TEST_STATUS` in
-[dv_report_manager.py](<repo_top>/hw/dv/py/dv_utils/dv_report_manager.py).
+pyuvm's `uvm_test` integration creates the shared report server. Pavona's
+[dv_base_test.py](<repo_top>/hw/dv/py/dv_lib/dv_base_test.py) emits the report summary and final
+`TEST_STATUS` from `report_phase`, then shuts the pyuvm report server down.
 
 That is not the only compatibility mechanism. The Python flow also uses a Python-specific sim cfg
 and reporting contract so that `dvsim` can consume build/run status, end-of-test markers, and
@@ -143,29 +144,31 @@ For automation, machine-readable status comes from:
 Human-readable status comes from:
 
 - UVM-like log lines
-- `DV_TEST_STATUS`
+- `TEST_STATUS`
 
 This remains the active contract:
 
 - JUnit and process exit code are machine truth
-- `DV_TEST_STATUS` and UVM-like summary lines are used for human triage and `dvsim` compatibility
+- `TEST_STATUS` and UVM-like summary lines are used for human triage and `dvsim` compatibility
 
 ## Runtime Knobs That Should Remain Plusarg-Driven
 
-The Python flow continues to honor the same style of runtime knobs used in SV/UVM, including:
+The Python flow continues to honor the same style of runtime knobs used in SV/UVM. Pavona's base
+test owns bench-level knobs, including:
 
 - `+UVM_TESTNAME`
 - `+UVM_TEST_SEQ`
-- `+UVM_VERBOSITY`
-- `+max_quit_count`
-- `+UVM_FAIL_ON_WARNING`
-- `+UVM_FAIL_ON_ERROR`
-- `+UVM_FAIL_ON_FATAL`
 - `+test_timeout_ns`
 - `+en_cov`
 
-This is broadly consistent with the argument handling in
-[dv_base_test.py](<repo_top>/hw/dv/py/dv_lib/dv_base_test.py).
+pyuvm's `uvm_test` reporting integration owns report-server knobs, including:
+
+- `+UVM_VERBOSITY`
+- `+max_quit_count`
+- `+print_char_len`
+- `+UVM_FAIL_ON_WARNING`
+- `+UVM_FAIL_ON_ERROR`
+- `+UVM_FAIL_ON_FATAL`
 
 ## Reset Testing Status
 
@@ -246,7 +249,7 @@ Python 3.12 and Verilator flow:
 
 Observed end-of-test markers:
 
-- `DV_TEST_STATUS: PASSED`
+- `TEST_STATUS: PASSED`
 - cocotb regression PASS
 
 
@@ -305,7 +308,7 @@ Fields that change:
 - a working Verilator make-based flow
 - a cocotb harness
 - pyUVM test structure
-- Python `dv_lib` / `dv_utils` usage
+- Python `dv_lib` usage
 
 This is the first completed `dvsim`-enabled Python path in the branch and is the best reference for
 future Python benches.

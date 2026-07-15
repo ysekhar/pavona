@@ -17,7 +17,7 @@ The `hw/dv/py/dv_lib` package now provides the core pyUVM verification scaffoldi
 - reset-domain modeling
 - seeded random support
 - cocotb utility support
-- reporting, verbosity, and log formatting infrastructure aligned with SV-UVM usage
+- pyuvm SV-UVM-style reporting integration aligned with SV-UVM usage
 
 ### Python protocol interfaces
 
@@ -66,8 +66,23 @@ The release adds the infrastructure required to run pyUVM block-level testbenche
 - pyUVM simulation core files
 - plusarg and time parsing fixes
 - simulation flow integration for Python-based testbenches
+- UVM-style report summary, quit count, and final `TEST_STATUS` emission
 
 This makes the Python DV environments runnable within the same operational flow used by the wider DV infrastructure.
+
+### Reporting integration
+
+Pavona's Python base test now uses pyuvm's SV-UVM-style reporting path:
+
+- `uvm_test` creates and configures the shared pyuvm report server
+- pyuvm owns report-server runtime options such as `UVM_VERBOSITY`,
+  `max_quit_count`, `print_char_len`, and fail-on-warning/error/fatal policy
+- Pavona emits report summary, final `TEST_STATUS`, coverage export, and
+  report-server shutdown from `report_phase`
+- test-level severity demotion remains available through
+  `add_message_demotes(catcher)`
+- the old Pavona reporting alias shims were removed in favor of direct public
+  pyuvm imports
 
 ### Coverage support
 
@@ -91,6 +106,8 @@ Python DV stack now behaves more like the existing SV-UVM infrastructure:
 
 - logging semantics were enhanced to match SV expectations more closely
 - verbosity behavior was refined
+- centralized report summary, severity counts, quit count, and final
+  `TEST_STATUS` are emitted through pyuvm reporting APIs
 - reset-domain and vif handle issues were fixed
 - reset testing was enabled and stabilized
 - log output was cleaned up for release use
@@ -104,8 +121,8 @@ Validation was performed with Python 3.12, using Verilator as the simulator.
 source <python-3.12-venv>/bin/activate
 PATH=<simulator-bin-dir>:$PATH \
 ./util/dvsim/dvsim.py \
+  ./hw/dv/py/tl_agent/dv/tl_agent_python_sim_cfg.hjson \
   --scratch-root <tmp_dir> \
-    \
   --run-opts "+max_quit_count=40 +print_char_len=80" \
   -i all \
   --cov \
@@ -118,6 +135,9 @@ Observed result:
 - all 35 reseeded test runs passed
 - coverage merge/report passed
 - reported coverage score was 100.00%
+- reset-enabled tests passed
+- run logs contained `--- UVM Report Summary ---`, `Quit count : 0 of 40`,
+  and `TEST_STATUS: PASSED`
 
 ## Release Commit Structure
 
