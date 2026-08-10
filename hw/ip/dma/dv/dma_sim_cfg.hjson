@@ -88,6 +88,12 @@
       uvm_test_seq: dma_mem_enabled_vseq
       reseed: 5
     }
+    // Minimal reproducer for chuncking issue
+    {
+      name: dma_partial_final_chunk_range
+      uvm_test_seq: dma_partial_final_chunk_range_vseq
+      reseed: 1
+    }
     {
       name: dma_config_lock
       uvm_test_seq: dma_config_lock_vseq
