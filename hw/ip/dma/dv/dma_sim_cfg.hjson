@@ -89,6 +89,11 @@
       reseed: 5
     }
     {
+      name: dma_sha_error_recovery
+      uvm_test_seq: dma_sha_error_recovery_vseq
+      reseed: 1
+    }
+    {
       name: dma_config_lock
       uvm_test_seq: dma_config_lock_vseq
       reseed: 15
